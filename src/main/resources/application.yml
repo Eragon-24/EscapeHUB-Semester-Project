@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: escapehub
+  profiles:
+    default: local
+  thymeleaf:
+    cache: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+info:
+  app:
+    name: EscapeHub
+    description: Collaborative mystery missions platform
+    version: 0.1.0-SNAPSHOT
