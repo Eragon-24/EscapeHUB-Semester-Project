@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EscapeHub</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="page-shell">
+    <section class="hero">
+        <p class="eyebrow">Collaborative mystery missions</p>
+        <h1>EscapeHub</h1>
+        <p class="subtitle">Η αρχιτεκτονική βάση της πλατφόρμας συνεργατικών αποστολών μυστηρίου.</p>
+        <div class="status-card">
+            <span class="status-dot"></span>
+            <span>Η εφαρμογή εκκινήθηκε επιτυχώς.</span>
+        </div>
+        <p class="note">Το project skeleton είναι έτοιμο για την ανάπτυξη των modules. Δεν έχουν υλοποιηθεί ακόμη λογαριασμοί, ομάδες ή γρίφοι.</p>
+        <a class="health-link" th:href="@{/api/v1/health}">Έλεγχος κατάστασης API</a>
+    </section>
+    <footer>EscapeHub · Initial project skeleton · v0.1.0</footer>
+</main>
+</body>
+</html>

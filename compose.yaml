@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:18
+    container_name: escapehub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-escapehub}
+      POSTGRES_USER: ${POSTGRES_USER:-escapehub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-local-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - escapehub-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-escapehub} -d ${POSTGRES_DB:-escapehub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  escapehub-postgres-data:
