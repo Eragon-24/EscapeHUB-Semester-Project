@@ -1,6 +1,7 @@
 package com.escapehub.gameplay.domain;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * US-001: Domain model για την προβολή ενός δωματίου στο Demo v0.1.
@@ -8,6 +9,14 @@ import java.util.List;
  * (σημειωματάριο, σεντούκι, πόρτα εξόδου).
  */
 public class Room {
+
+    /** Όνομα του σημειωματαρίου στη λίστα αντικειμένων. */
+    public static final String NOTEBOOK = "Παλιό Σημειωματάριο";
+
+    /** US-002: η ένδειξη που αποκαλύπτεται όταν επιλεγεί το σημειωματάριο (εξάψηφος κωδικός). */
+    public static final String NOTEBOOK_CLUE =
+            "Στην τελευταία σελίδα είναι γραμμένος ένας εξάψηφος κωδικός: 4-8-3-9-2-0. "
+                    + "Δίπλα του, υπογραμμισμένο: «Το σεντούκι στη γωνία».";
 
     private final String name;
     private final String description;
@@ -77,5 +86,19 @@ public class Room {
      */
     public List<String> getSelectableObjects() {
         return selectableObjects;
+    }
+
+    /**
+     * US-002: Επιλογή αντικειμένου. Επιστρέφει την ένδειξη που αποκαλύπτει,
+     * ή κενό αν το αντικείμενο δεν κρύβει ένδειξη.
+     *
+     * @param objectName το όνομα του αντικειμένου που επέλεξε ο παίκτης
+     * @return η ένδειξη, αν υπάρχει
+     */
+    public Optional<String> inspect(final String objectName) {
+        if (NOTEBOOK.equals(objectName)) {
+            return Optional.of(NOTEBOOK_CLUE);
+        }
+        return Optional.empty();
     }
 }

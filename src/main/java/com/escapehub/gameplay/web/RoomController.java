@@ -1,5 +1,6 @@
 package com.escapehub.gameplay.web;
 
+import com.escapehub.gameplay.domain.Room;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,11 +32,7 @@ public class RoomController {
                 "objectSummary",
                 "Δερματόδετο σημειωματάριο με χειρόγραφες σημειώσεις."
         );
-        model.addAttribute(
-                "objectClue",
-                "Στην τελευταία σελίδα είναι γραμμένος ένας τετραψήφιος κωδικός: 4-7-1-9. "
-                        + "Δίπλα του, υπογραμμισμένο: «Το ντουλάπι με τα αντιδραστήρια»."
-        );
+        model.addAttribute("objectClue", Room.NOTEBOOK_CLUE);
         return "room";
     }
 }
