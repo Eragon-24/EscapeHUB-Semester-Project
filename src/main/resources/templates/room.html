@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${roomName} + ' - EscapeHub'">EscapeHub - Δωμάτιο</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <header>
+        <p><a th:href="@{/}">← Επιστροφή στην Αρχική</a></p>
+        <h1 id="room-title" th:text="${roomName}">Όνομα Δωματίου</h1>
+    </header>
+
+    <section aria-labelledby="room-title">
+        <p id="room-description" th:text="${roomDescription}">
+            Περιγραφή δωματίου...
+        </p>
+    </section>
+
+    <section aria-labelledby="room-objects-heading">
+        <h2 id="room-objects-heading">Αντικείμενα στον χώρο</h2>
+        <div class="room-object-card" th:attr="data-object-id=${objectId}">
+            <h3 th:text="${objectName}">Όνομα Αντικειμένου</h3>
+            <p th:text="${objectSummary}">Σύντομη περιγραφή αντικειμένου.</p>
+            <button type="button"
+                    id="select-object-btn"
+                    th:attr="data-object-id=${objectId}">
+                Επιλογή αντικειμένου
+            </button>
+        </div>
+    </section>
+</main>
+</body>
+</html>
