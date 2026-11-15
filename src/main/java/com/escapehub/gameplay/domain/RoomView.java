@@ -52,7 +52,9 @@ public class RoomView {
             final JButton objectButton = new JButton(objectName);
             objectButton.addActionListener(e -> JOptionPane.showMessageDialog(
                     frame,
-                    "Επέλεξες: " + objectName
+                    room.inspect(objectName)
+                            .map(clue -> objectName + "\n\nΕνδειξη: " + clue)
+                            .orElse("Επέλεξες: " + objectName)
             ));
             objectsPanel.add(objectButton);
         }

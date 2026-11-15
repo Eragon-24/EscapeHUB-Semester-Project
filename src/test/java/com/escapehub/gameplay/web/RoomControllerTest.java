@@ -29,6 +29,7 @@ class RoomControllerTest {
                 .andExpect(model().attribute("roomName", "Εγκαταλελειμμένο Εργαστήριο"))
                 .andExpect(model().attributeExists("roomDescription"))
                 .andExpect(model().attribute("objectId", "lab-notebook"))
-                .andExpect(model().attribute("objectName", "Παλιό Σημειωματάριο Ερευνών"));
+                .andExpect(model().attribute("objectName", "Παλιό Σημειωματάριο Ερευνών"))
+                .andExpect(model().attributeExists("objectClue"));
     }
 }
