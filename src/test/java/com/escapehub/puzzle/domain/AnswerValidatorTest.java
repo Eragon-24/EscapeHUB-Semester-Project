@@ -43,4 +43,19 @@ class AnswerValidatorTest {
         assertFalse(result.correct());
         assertEquals(AnswerResult.FAILURE_MESSAGE, result.message());
     }
+
+    @Test
+    void shouldReturnFalseWhenAnswersAreEmptyOrBlank() {
+        assertFalse(validator.validate("", ""));
+        assertFalse(validator.validate("   ", "   "));
+        assertFalse(validator.validate("", "secretcode"));
+        assertFalse(validator.validate("   ", "secretcode"));
+    }
+
+    @Test
+    void checkShouldReturnFailureForBlankAnswer() {
+        AnswerResult result = validator.check("   ", "   ");
+        assertFalse(result.correct());
+        assertEquals(AnswerResult.FAILURE_MESSAGE, result.message());
+    }
 }

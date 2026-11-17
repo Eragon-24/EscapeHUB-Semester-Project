@@ -10,10 +10,11 @@ public class AnswerValidator {
      *
      * @param userAnswer η απάντηση του παίκτη
      * @param correctAnswer η σωστή απάντηση
-     * @return true αν ταιριάζουν, false αλλιώς (και όταν κάποια είναι null)
+     * @return true αν ταιριάζουν, false αλλιώς (και όταν κάποια είναι null, κενή ή μόνο κενά)
      */
     public boolean validate(String userAnswer, String correctAnswer) {
-        if (userAnswer == null || correctAnswer == null) {
+        if (userAnswer == null || correctAnswer == null
+                || userAnswer.isBlank() || correctAnswer.isBlank()) {
             return false;
         }
         return userAnswer.trim().equalsIgnoreCase(correctAnswer.trim());
