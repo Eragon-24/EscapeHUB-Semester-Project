@@ -18,6 +18,8 @@ public class ChestPuzzle {
     private static final String PROMPT =
             "Το chest έχει κλειδαριά με εξάψηφο κωδικό. Πληκτρολόγησε τον κωδικό.";
 
+    private static final AnswerValidator VALIDATOR = new AnswerValidator();
+
     private final String code;
     private boolean solved;
 
@@ -39,11 +41,18 @@ public class ChestPuzzle {
         return CODE_LENGTH;
     }
 
-    /** Υποβάλλει απάντηση. Επιστρέφει true αν είναι σωστή, αλλιώς false. */
-    public boolean submit(String answer) {
-        if (answer != null && answer.trim().equals(code)) {
+    /** US-004: ελέγχει την απάντηση και επιστρέφει αποτέλεσμα με μήνυμα επιτυχίας/αποτυχίας. */
+    public AnswerResult check(String answer) {
+        AnswerResult result = VALIDATOR.check(answer, code);
+        if (result.correct()) {
             solved = true;
         }
+        return result;
+    }
+
+    /** Υποβάλλει απάντηση. Επιστρέφει true αν το παζλ είναι λυμένο. */
+    public boolean submit(String answer) {
+        check(answer);
         return solved;
     }
 

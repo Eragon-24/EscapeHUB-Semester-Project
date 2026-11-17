@@ -1,6 +1,5 @@
-package com.escapehub.gameplay.domain;
+package com.escapehub.puzzle.domain;
 
-import com.escapehub.puzzle.domain.AnswerValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,5 +28,19 @@ class AnswerValidatorTest {
     void shouldReturnFalseWhenInputIsNull() {
         assertFalse(validator.validate(null, "secretcode"));
         assertFalse(validator.validate("secretcode", null));
+    }
+
+    @Test
+    void checkShouldReturnSuccessMessageForCorrectAnswer() {
+        AnswerResult result = validator.check("483920", "483920");
+        assertTrue(result.correct());
+        assertEquals(AnswerResult.SUCCESS_MESSAGE, result.message());
+    }
+
+    @Test
+    void checkShouldReturnFailureMessageForWrongAnswer() {
+        AnswerResult result = validator.check("111111", "483920");
+        assertFalse(result.correct());
+        assertEquals(AnswerResult.FAILURE_MESSAGE, result.message());
     }
 }
