@@ -26,11 +26,18 @@
             <p th:text="${objectSummary}">Σύντομη περιγραφή αντικειμένου.</p>
             <button type="button"
                     id="select-object-btn"
+                    aria-controls="clue-panel"
+                    aria-expanded="false"
                     th:attr="data-object-id=${objectId}">
                 Επιλογή αντικειμένου
             </button>
+            <div id="clue-panel" class="clue-panel" role="status" aria-live="polite" hidden>
+                <h4>Ένδειξη</h4>
+                <p id="clue-text" th:text="${objectClue}">Κείμενο ένδειξης.</p>
+            </div>
         </div>
     </section>
 </main>
+<script th:src="@{/js/room.js}"></script>
 </body>
 </html>

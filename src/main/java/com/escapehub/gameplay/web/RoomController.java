@@ -1,5 +1,6 @@
 package com.escapehub.gameplay.web;
 
+import com.escapehub.gameplay.domain.Room;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ public class RoomController {
                 "objectSummary",
                 "Δερματόδετο σημειωματάριο με χειρόγραφες σημειώσεις."
         );
+        model.addAttribute("objectClue", Room.NOTEBOOK_CLUE);
         return "room";
     }
 }

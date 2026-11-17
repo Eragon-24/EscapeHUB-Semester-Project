@@ -47,3 +47,16 @@ h1 { margin: 0; font-size: clamp(2.7rem, 8vw, 4.5rem); letter-spacing: -0.06em; 
 .health-link { display: inline-block; margin-top: 12px; color: #3159a8; font-weight: 700; text-decoration: none; }
 .health-link:hover { text-decoration: underline; }
 footer { position: fixed; bottom: 18px; color: #8a93a5; font-size: 0.82rem; }
+
+/* Room object interaction (US-002) */
+.room-object-card.selected { border-color: #24a35a; }
+.clue-panel {
+    margin-top: 14px;
+    padding: 14px 18px;
+    background: #fff8e1;
+    border: 1px solid #f0d78a;
+    border-radius: 12px;
+}
+.clue-panel[hidden] { display: none; }
+.clue-panel h4 { margin: 0 0 6px; }
+.clue-panel p { margin: 0; line-height: 1.6; }
