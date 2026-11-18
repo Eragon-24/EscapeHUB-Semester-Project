@@ -1,21 +1,38 @@
 package com.escapehub.gameplay.web;
 
+import com.escapehub.gameplay.domain.Room;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Redirects the legacy room URL to the browser-based multiplayer demo.
+ * Controller for displaying the initial demo room (US-001).
  */
 @Controller
 public class RoomController {
 
     /**
-     * Keeps the original room URL working while serving the new browser game.
+     * Displays the abandoned laboratory room with its initial selectable object.
      *
-     * @return redirect to the browser-based game
+     * @param model the Spring MVC model
+     * @return the room template name
      */
     @GetMapping("/room")
-    public String showRoom() {
-        return "redirect:/game";
+    public String showRoom(final Model model) {
+        model.addAttribute("roomName", "Εγκαταλελειμμένο Εργαστήριο");
+        model.addAttribute(
+                "roomDescription",
+                " βρίσκεσαι σε ένα σκοτεινό, σκονισμένο εργαστήριο ερευνών. "
+                        + "Πάνω στον κεντρικό πάγκο διακρίνεται ένα αντικείμενο που "
+                        + "φαίνεται να κρύβει την πρώτη σου ένδειξη."
+        );
+        model.addAttribute("objectId", "lab-notebook");
+        model.addAttribute("objectName", "Παλιό Σημειωματάριο Ερευνών");
+        model.addAttribute(
+                "objectSummary",
+                "Δερματόδετο σημειωματάριο με χειρόγραφες σημειώσεις."
+        );
+        model.addAttribute("objectClue", Room.NOTEBOOK_CLUE);
+        return "room";
     }
 }

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${roomName} + ' - Multiplayer Room'">EscapeHub - Multiplayer Room</title>
+    <link rel="stylesheet" th:href="@{/css/multiplayer-room.css}">
+</head>
+<body class="multiplayer-room-page">
+<main class="multiplayer-shell">
+    <header class="room-header">
+        <p class="eyebrow">EscapeHub · US-014 · Room View</p>
+        <h1 th:text="${roomName}">Εγκαταλελειμμένο Εργαστήριο</h1>
+        <p class="room-description" th:text="${roomDescription}">
+            Προβολή του χώρου της αποστολής.
+        </p>
+    </header>
+
+    <section class="room-layout" aria-label="Προβολή multiplayer δωματίου">
+        <div class="room-board-panel">
+            <canvas id="room-canvas"
+                    width="960"
+                    height="640"
+                    aria-label="Στατική απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
+            </canvas>
+            <p class="board-caption">
+                Βασική οπτική απεικόνιση του δωματίου. Η κίνηση και οι αλληλεπιδράσεις
+                θα συνδεθούν από τα αντίστοιχα User Stories.
+            </p>
+        </div>
+
+        <aside class="room-sidebar">
+            <section class="room-card">
+                <h2>Συνεδρία παιχνιδιού</h2>
+                <div class="created-session" th:if="${createdSessionCode != null}">
+                    <p>Η συνεδρία δημιουργήθηκε. Κωδικός συμμετοχής:</p>
+                    <code class="session-code" th:text="${createdSessionCode}">ABC234</code>
+                    <p class="session-id">
+                        Αναγνωριστικό: <span th:text="${createdSessionId}">session-id</span>
+                    </p>
+                    <p>Μοιράσου τον κωδικό με τους υπόλοιπους παίκτες.</p>
+                </div>
+
+                <form th:if="${canCreateSession}" th:action="@{/game-sessions}" method="post">
+                    <button type="submit">Δημιουργία συνεδρίας</button>
+                </form>
+                <p th:unless="${canCreateSession}" class="muted-message">
+                    Για τη δημιουργία συνεδρίας απαιτείται σύνδεση χρήστη.
+                    Η σύνδεση παρέχεται από το US-008.
+                </p>
+            </section>
+
+            <section class="room-card">
+                <h2>Συμμετέχοντες</h2>
+                <p class="muted-message">
+                    Η συμμετοχή σε συνεδρία και η εμφάνιση των παικτών θα συνδεθούν
+                    από το US-012.
+                </p>
+            </section>
+
+            <section class="room-card">
+                <h2>Επεκτάσεις multiplayer</h2>
+                <p class="muted-message">
+                    Η κοινή κατάσταση, η κίνηση, οι αλληλεπιδράσεις, το ημερολόγιο
+                    στοιχείων και η πρόοδος γρίφων παραμένουν σημεία επέκτασης για
+                    τα US-013 και US-015 έως US-018.
+                </p>
+            </section>
+
+            <a class="back-link" th:href="@{/room}">← Επιστροφή στο αρχικό room demo</a>
+        </aside>
+    </section>
+</main>
+<script th:src="@{/js/multiplayer-room.js}" defer></script>
+</body>
+</html>
