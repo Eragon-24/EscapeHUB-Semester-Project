@@ -106,7 +106,7 @@ class GameSessionServiceTest {
     @Test
     void shouldRejectChestAnswerUntilNotebookHasBeenFound() {
         final String playerId = service.addPlayer();
-        moveToChest(playerId);
+        moveToChestWithoutClue(playerId);
 
         final GameSessionService.GameSnapshot state =
                 service.submitAnswer(playerId, "483920");
@@ -155,9 +155,14 @@ class GameSessionServiceTest {
 
     private void moveToChest(final String playerId) {
         move(playerId, 0, -1, 19);
-        move(playerId, 1, 0, 33);
         move(playerId, 0, 1, 1);
-        move(playerId, 1, 0, 18);
+        move(playerId, 1, 0, 50);
+    }
+
+    private void moveToChestWithoutClue(final String playerId) {
+        move(playerId, 0, -1, 19);
+        move(playerId, 0, 1, 1);
+        move(playerId, 1, 0, 43);
     }
 
     private void moveToExit(final String playerId) {
