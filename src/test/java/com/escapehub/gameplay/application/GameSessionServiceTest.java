@@ -40,13 +40,13 @@ class GameSessionServiceTest {
         final GameSessionService.PlayerSnapshot secondInitial =
                 findPlayer(service.snapshotFor(secondPlayer), secondPlayer);
 
-        service.movePlayer(firstPlayer, 1, 0);
+        service.movePlayer(firstPlayer, -1, 0);
 
         final GameSessionService.GameSnapshot state = service.snapshotFor(secondPlayer);
         final GameSessionService.PlayerSnapshot movedPlayer = findPlayer(state, firstPlayer);
         final GameSessionService.PlayerSnapshot otherPlayer = findPlayer(state, secondPlayer);
 
-        assertTrue(movedPlayer.x() > 360);
+        assertTrue(movedPlayer.x() < 360);
         assertEquals(secondInitial.x(), otherPlayer.x());
         assertEquals(secondInitial.y(), otherPlayer.y());
     }
@@ -56,18 +56,15 @@ class GameSessionServiceTest {
         final String firstPlayer = service.addPlayer();
         final String secondPlayer = service.addPlayer();
 
-        for (int step = 0; step < 4; step++) {
-            service.movePlayer(firstPlayer, 1, 0);
-        }
-        for (int step = 0; step < 4; step++) {
-            service.movePlayer(secondPlayer, -1, 0);
-        }
+        service.movePlayer(firstPlayer, 0, -1);
+        service.movePlayer(secondPlayer, -1, 0);
 
         final GameSessionService.GameSnapshot state = service.snapshotFor(firstPlayer);
         final GameSessionService.PlayerSnapshot first = findPlayer(state, firstPlayer);
         final GameSessionService.PlayerSnapshot second = findPlayer(state, secondPlayer);
 
         assertTrue(Math.hypot(first.x() - second.x(), first.y() - second.y()) >= 30.0);
+        assertEquals(395.0, second.x());
     }
 
     @Test
@@ -154,7 +151,6 @@ class GameSessionServiceTest {
     }
 
     private void moveToChest(final String playerId) {
-        move(playerId, 0, -1, 19);
         move(playerId, 0, 1, 1);
         move(playerId, 1, 0, 50);
     }
