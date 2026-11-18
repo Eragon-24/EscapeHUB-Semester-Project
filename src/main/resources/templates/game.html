@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EscapeHub - Multiplayer Demo</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/game.css}">
+</head>
+<body class="game-page">
+<main class="game-shell">
+    <header class="game-header">
+        <div>
+            <p class="eyebrow">EscapeHub · LAN multiplayer demo</p>
+            <h1>Εγκαταλελειμμένο Εργαστήριο</h1>
+            <p class="game-subtitle">Εξερευνήστε μαζί, βρείτε τον κωδικό και ξεκλειδώστε την έξοδο.</p>
+        </div>
+        <div id="connection-status" class="connection-status" role="status">Σύνδεση στον server…</div>
+    </header>
+
+    <section class="game-layout" aria-label="Περιοχή παιχνιδιού">
+        <div class="game-board-wrap">
+            <canvas id="game-canvas" width="960" height="640"
+                    aria-label="Top-down χάρτης του εργαστηρίου"></canvas>
+            <div class="game-instructions">
+                <span>Κίνηση: WASD / Βέλη</span>
+                <span>Αλληλεπίδραση: E</span>
+            </div>
+        </div>
+
+        <aside class="game-sidebar">
+            <section class="game-panel">
+                <h2>Κατάσταση αποστολής</h2>
+                <p id="game-status" aria-live="polite">Περιμένουμε τη σύνδεση…</p>
+                <p id="clue-panel" class="clue-text" hidden></p>
+            </section>
+            <section class="game-panel">
+                <h2>Παίκτες στο δωμάτιο</h2>
+                <p id="player-count">0 συνδεδεμένοι</p>
+                <ul id="player-list" class="player-list"></ul>
+            </section>
+            <section class="game-panel">
+                <h2>Στόχοι</h2>
+                <ul class="mission-list">
+                    <li id="objective-notebook">Εξέτασε το σημειωματάριο</li>
+                    <li id="objective-chest">Άνοιξε το σεντούκι</li>
+                    <li id="objective-exit">Ξεκλείδωσε την έξοδο</li>
+                </ul>
+            </section>
+            <section class="game-panel touch-panel">
+                <h2>Χειρισμός</h2>
+                <div class="touch-controls">
+                    <button type="button" data-direction="up" aria-label="Κίνηση επάνω">↑</button>
+                    <button type="button" data-direction="left" aria-label="Κίνηση αριστερά">←</button>
+                    <button type="button" data-direction="down" aria-label="Κίνηση κάτω">↓</button>
+                    <button type="button" data-direction="right" aria-label="Κίνηση δεξιά">→</button>
+                    <button type="button" id="interact-button" class="interact-button">E · Αλληλεπίδραση</button>
+                </div>
+            </section>
+            <a class="back-link" th:href="@{/}">← Επιστροφή στην αρχική</a>
+        </aside>
+    </section>
+</main>
+<script th:src="@{/js/game.js}"></script>
+</body>
+</html>
