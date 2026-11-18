@@ -60,3 +60,5 @@ footer { position: fixed; bottom: 18px; color: #8a93a5; font-size: 0.82rem; }
 .clue-panel[hidden] { display: none; }
 .clue-panel h4 { margin: 0 0 6px; }
 .clue-panel p { margin: 0; line-height: 1.6; }
+
+.error { color: #b3261e; font-size: 0.9rem; }
