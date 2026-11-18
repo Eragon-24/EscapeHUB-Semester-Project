@@ -1,6 +1,10 @@
 package com.escapehub.gameplay.ui;
 
 import com.escapehub.gameplay.domain.Room;
+import com.escapehub.gameplay.domain.ExitAccessResult;
+import com.escapehub.gameplay.domain.ExitAccessService;
+import com.escapehub.gameplay.domain.ItemType;
+import com.escapehub.gameplay.domain.RoomExit;
 import com.escapehub.puzzle.domain.AnswerResult;
 import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.awt.BasicStroke;
@@ -60,7 +64,14 @@ public class TopDownRoomView {
     private final Room room;
     private final ChestPuzzle chestPuzzle;
     private final Set<Integer> pressedKeys = new HashSet<>();
+    private final Set<ItemType> sessionItems = new HashSet<>();
     private final JPanel gamePanel;
+    private final ExitAccessService exitAccessService = new ExitAccessService();
+    private final RoomExit demoExit = new RoomExit(
+            "LAB_EXIT",
+            "STORAGE_ROOM",
+            Set.of(ItemType.LAB_KEY)
+    );
 
     private JFrame frame;
     private Timer gameTimer;
@@ -284,6 +295,7 @@ public class TopDownRoomView {
         final AnswerResult result = chestPuzzle.check(answer);
         if (result.correct()) {
             hasKey = true;
+            sessionItems.add(ItemType.LAB_KEY);
             statusMessage = result.message() + " Το σεντούκι άνοιξε! Πήρες το κλειδί της εξόδου.";
             JOptionPane.showMessageDialog(
                     frame, statusMessage, "Σωστός κωδικός", JOptionPane.INFORMATION_MESSAGE);
@@ -295,7 +307,11 @@ public class TopDownRoomView {
     }
 
     private void inspectExit() {
-        if (!hasKey) {
+        final ExitAccessResult access = exitAccessService.checkAccess(
+                demoExit,
+                sessionItems
+        );
+        if (!access.allowed()) {
             statusMessage = "Η πόρτα είναι κλειδωμένη. Χρειάζεσαι το κλειδί "
                     + "από το σεντούκι.";
             JOptionPane.showMessageDialog(
