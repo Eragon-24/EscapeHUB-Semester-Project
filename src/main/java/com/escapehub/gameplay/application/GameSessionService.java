@@ -174,8 +174,8 @@ public class GameSessionService {
             final String playerId,
             final String answer) {
         final PlayerState player = requirePlayer(playerId);
-        if (findNearbyTarget(player) == null
-                || !"CHEST".equals(findNearbyTarget(player).name)) {
+        final Target target = findNearbyTarget(player);
+        if (target == null || !"CHEST".equals(target.name)) {
             statusMessage = "Πλησίασε πρώτα στο σεντούκι.";
             return snapshotFor(playerId);
         }
@@ -244,7 +244,7 @@ public class GameSessionService {
             final double nextX,
             final double nextY,
             final boolean horizontal) {
-        if (canMoveTo(nextX, nextY)) {
+        if (canMoveTo(player, nextX, nextY)) {
             if (horizontal) {
                 player.x = nextX;
             } else {
@@ -253,7 +253,7 @@ public class GameSessionService {
         }
     }
 
-    private boolean canMoveTo(final double x, final double y) {
+    private boolean canMoveTo(final PlayerState movingPlayer, final double x, final double y) {
         if (x < ROOM_LEFT + PLAYER_RADIUS || x > ROOM_RIGHT - PLAYER_RADIUS
                 || y < ROOM_TOP || y > ROOM_BOTTOM - PLAYER_RADIUS) {
             return false;
@@ -265,9 +265,14 @@ public class GameSessionService {
                 PLAYER_RADIUS * 2,
                 PLAYER_RADIUS * 2
         );
-        return !playerBounds.intersects(DESK)
-                && !playerBounds.intersects(CHEST)
-                && !playerBounds.intersects(EXIT_DOOR);
+        if (playerBounds.intersects(DESK)
+                || playerBounds.intersects(CHEST)
+                || playerBounds.intersects(EXIT_DOOR)) {
+            return false;
+        }
+        return players.values().stream()
+                .filter(other -> other != movingPlayer)
+                .noneMatch(other -> Math.hypot(x - other.x, y - other.y) < PLAYER_RADIUS * 2);
     }
 
     private Target findNearbyTarget(final PlayerState player) {

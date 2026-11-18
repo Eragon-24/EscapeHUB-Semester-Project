@@ -4,7 +4,7 @@
 
 This repository contains the initial IntelliJ-ready project skeleton for the Software Engineering semester project.
 
-> Current status: architecture scaffold only. User accounts, teams, missions, puzzles, evidence persistence and external API integration have not been implemented yet.
+> Current status: V0.1.0 (US001–US006) is published. The `feature/web-lan-multiplayer-game` branch contains the in-progress browser-based LAN multiplayer conversion.
 
 ## Proposed stack
 
@@ -68,9 +68,37 @@ To delete the local database volume as well (destructive):
 docker compose down -v
 ```
 
+## Browser multiplayer demo (LAN)
+
+The browser-based top-down demo is served by Spring Boot. The local profile binds
+the server to `0.0.0.0:8080`, allowing other devices on the same trusted LAN to
+connect to the host computer.
+
+1. Start `EscapeHubApplication` on the host computer.
+2. Open `http://localhost:8080/game` on the host to verify the game.
+3. Find the host computer's private IPv4 address (for example with `ipconfig`
+   on Windows).
+4. On each other device connected to the same Wi-Fi/LAN, open
+   `http://<HOST-LAN-IP>:8080/game`.
+5. If Windows Firewall prompts, allow Java/EscapeHub on **Private networks**
+   or create an inbound TCP rule for port `8080` on the Private profile.
+
+Do not configure router port forwarding for this local-network demo. All players
+who connect to this initial demo share one room and one mission state. Each browser
+controls its own character; notebook discovery, the chest and the exit are shared.
+The server is authoritative for player movement, interaction distance and puzzle
+validation. WebSocket communication uses the same host and port as the web page.
+
+This is a local demonstration, not a production deployment. Authentication,
+separate game rooms, persistent sessions and internet-facing security are outside
+this milestone.
+
 ## Initial endpoints
 
-- Web page: `GET /`
+- Landing page: `GET /`
+- Browser game: `GET /game`
+- Legacy room URL (redirects to the browser game): `GET /room`
+- Real-time game channel: `/ws/game` (WebSocket)
 - Basic API check: `GET /api/v1/health`
 - Spring Boot health: `GET /actuator/health`
 

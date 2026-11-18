@@ -49,6 +49,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        if (message.getPayloadLength() > 128) {
+            session.close(CloseStatus.TOO_BIG_TO_PROCESS);
+            return;
+        }
+
         final String[] parts = message.getPayload().split("\\|", -1);
         try {
             switch (parts[0]) {
