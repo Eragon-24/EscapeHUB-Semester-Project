@@ -67,3 +67,4 @@ footer { position: fixed; bottom: 18px; color: #8a93a5; font-size: 0.82rem; }
 .login-form button { margin-top: 8px; padding: 10px 14px; border: 0; border-radius: 10px; background: #3159a8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .inline-form { display: inline; }
 .link-button { background: none; border: 0; padding: 0; color: #3159a8; font: inherit; font-weight: 700; cursor: pointer; }
+.error { color: #b3261e; font-size: 0.9rem; }

@@ -29,9 +29,3 @@ info:
     name: EscapeHub
     description: Collaborative mystery missions platform
     version: 0.1.0-SNAPSHOT
-
-# US-008: προσωρινός demo χρήστης (ΟΧΙ για παραγωγή). Ο κωδικός αλλάζει με τη μεταβλητή DEMO_PASSWORD.
-escapehub:
-  auth:
-    demo-username: demo
-    demo-password: ${DEMO_PASSWORD:demo1234}
