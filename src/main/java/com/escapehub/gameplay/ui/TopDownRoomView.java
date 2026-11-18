@@ -1,6 +1,7 @@
 package com.escapehub.gameplay.ui;
 
 import com.escapehub.gameplay.domain.Room;
+import com.escapehub.puzzle.domain.AnswerResult;
 import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -280,13 +281,14 @@ public class TopDownRoomView {
             return;
         }
 
-        if (chestPuzzle.submit(answer)) {
+        final AnswerResult result = chestPuzzle.check(answer);
+        if (result.correct()) {
             hasKey = true;
-            statusMessage = "Το σεντούκι άνοιξε! Πήρες το κλειδί της εξόδου.";
+            statusMessage = result.message() + " Το σεντούκι άνοιξε! Πήρες το κλειδί της εξόδου.";
             JOptionPane.showMessageDialog(
                     frame, statusMessage, "Σωστός κωδικός", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            statusMessage = "Λάθος κωδικός. Διάβασε ξανά το σημειωματάριο.";
+            statusMessage = result.message() + " Διάβασε ξανά το σημειωματάριο.";
             JOptionPane.showMessageDialog(
                     frame, statusMessage, "Λάθος κωδικός", JOptionPane.WARNING_MESSAGE);
         }
