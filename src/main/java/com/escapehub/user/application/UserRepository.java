@@ -9,12 +9,14 @@ import java.util.Optional;
 public interface UserRepository {
 
     /**
-     * Αποθηκεύει νέο χρήστη και του αποδίδει id.
+     * Αποθηκεύει νέο χρήστη και του αποδίδει id. Η μοναδικότητα του username και του email
+     * (χωρίς διάκριση πεζών/κεφαλαίων) ελέγχεται και επιβάλλεται ατομικά εδώ.
      *
      * @param username όνομα χρήστη
      * @param email email
      * @param passwordHash hash κωδικού
      * @return ο αποθηκευμένος χρήστης
+     * @throws DuplicateUserException αν το username ή το email υπάρχει ήδη
      */
     User save(String username, String email, String passwordHash);
 

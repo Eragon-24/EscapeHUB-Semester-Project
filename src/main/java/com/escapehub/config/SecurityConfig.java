@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -24,10 +24,15 @@ public class SecurityConfig {
     }
 
     /**
-     * US-007: BCrypt encoder so that passwords are stored only as hashes.
+     * Κωδικοποιητής κωδικών (BCrypt μέσω delegating encoder).
+     *
+     * <p>Κοινός για την εγγραφή (US-007) και τη σύνδεση (US-008): ο hash αποθηκεύεται με πρόθεμα
+     * ({@code {bcrypt}...}) και η σύνδεση τον επαληθεύει με τον ίδιο encoder.
+     *
+     * @return ο κωδικοποιητής κωδικών
      */
     @Bean
     PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }

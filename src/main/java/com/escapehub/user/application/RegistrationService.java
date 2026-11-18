@@ -53,12 +53,7 @@ public class RegistrationService {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new IllegalArgumentException("Invalid password");
         }
-        if (users.findByUsername(cleanUsername).isPresent()) {
-            throw new DuplicateUserException("username");
-        }
-        if (users.findByEmail(cleanEmail).isPresent()) {
-            throw new DuplicateUserException("email");
-        }
+        // Η μοναδικότητα επιβάλλεται ατομικά από το repository (DuplicateUserException).
         return users.save(cleanUsername, cleanEmail, passwordEncoder.encode(password));
     }
 }

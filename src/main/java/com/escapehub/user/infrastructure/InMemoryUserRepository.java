@@ -1,5 +1,6 @@
 package com.escapehub.user.infrastructure;
 
+import com.escapehub.user.application.DuplicateUserException;
 import com.escapehub.user.application.UserRepository;
 import com.escapehub.user.domain.User;
 import java.util.ArrayList;
@@ -10,6 +11,9 @@ import org.springframework.stereotype.Repository;
 
 /**
  * US-007: προσωρινή αποθήκευση χρηστών στη μνήμη. Θα αντικατασταθεί από βάση δεδομένων (persistence, W8).
+ *
+ * <p>Η μοναδικότητα username/email επιβάλλεται εδώ, ατομικά μέσα στο {@code save}, ώστε δύο ταυτόχρονες
+ * εγγραφές με τα ίδια στοιχεία να μην περάσουν και οι δύο. Στη βάση θα το αναλάβουν unique constraints.
  */
 @Repository
 public class InMemoryUserRepository implements UserRepository {
@@ -19,6 +23,12 @@ public class InMemoryUserRepository implements UserRepository {
 
     @Override
     public synchronized User save(final String username, final String email, final String passwordHash) {
+        if (findByUsername(username).isPresent()) {
+            throw new DuplicateUserException("username");
+        }
+        if (findByEmail(email).isPresent()) {
+            throw new DuplicateUserException("email");
+        }
         final User user = new User(nextId++, username, email, passwordHash);
         users.add(user);
         return user;
