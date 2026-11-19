@@ -16,9 +16,9 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class TeamService {
-
+    public static final int JOIN_CODE_LENGTH = 6;
     public static final int MAX_NAME_LENGTH = 50;
-    static final int JOIN_CODE_LENGTH = 6;
+
 
     // Χωρίς 0/O και 1/I για να μη μπερδεύονται.
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
