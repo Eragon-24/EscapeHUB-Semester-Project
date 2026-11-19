@@ -52,9 +52,28 @@
 
             <section class="room-card">
                 <h2>Συμμετέχοντες</h2>
-                <p class="muted-message">
-                    Η συμμετοχή σε συνεδρία και η εμφάνιση των παικτών θα συνδεθούν
-                    από το US-012.
+                <div class="created-session" th:if="${joinedSessionCode != null}">
+                    <p>Συμμετέχεις στη συνεδρία: <code th:text="${joinedSessionCode}">ABC234</code></p>
+                    <p>Παίκτες (<span th:text="${#sets.size(sessionPlayers)}">1</span>/6):</p>
+                    <ul>
+                        <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
+                    </ul>
+                </div>
+                <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
+                    Μήνυμα σφάλματος.
+                </p>
+                <form th:if="${canCreateSession}" th:action="@{/game-sessions/join}" method="post">
+                    <label for="joinCode">Κωδικός συνεδρίας:</label>
+                    <input id="joinCode"
+                           name="joinCode"
+                           type="text"
+                           maxlength="6"
+                           placeholder="π.χ. ABC234"
+                           required>
+                    <button type="submit">Συμμετοχή σε συνεδρία</button>
+                </form>
+                <p th:unless="${canCreateSession}" class="muted-message">
+                    Για συμμετοχή σε συνεδρία απαιτείται σύνδεση χρήστη.
                 </p>
             </section>
 
