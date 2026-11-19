@@ -17,6 +17,15 @@
             <span>Η εφαρμογή εκκινήθηκε επιτυχώς.</span>
         </div>
         <p class="note">Το project skeleton είναι έτοιμο για την ανάπτυξη των modules. Δεν έχουν υλοποιηθεί ακόμη λογαριασμοί, ομάδες ή γρίφοι.</p>
+        <div class="note" th:if="${username != null}">
+            Συνδεδεμένος ως <strong th:text="${username}">χρήστης</strong>.
+            <form th:action="@{/logout}" method="post" class="inline-form">
+                <button type="submit" class="link-button">Αποσύνδεση</button>
+            </form>
+        </div>
+        <p class="note" th:if="${username == null}">
+            <a class="health-link" th:href="@{/login}">Σύνδεση</a>
+        </p>
         <a class="health-link" th:href="@{/room}">Μπες στο δωμάτιο demo →</a><br>
         <a class="health-link" th:href="@{/register}">Δημιουργία λογαριασμού</a><br>
         <a class="health-link" th:href="@{/api/v1/health}">Έλεγχος κατάστασης API</a>
