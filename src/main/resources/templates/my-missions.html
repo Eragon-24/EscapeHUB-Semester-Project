@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Οι αποστολές μου - EscapeHub</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <p><a th:href="@{/}">← Επιστροφή στην Αρχική</a></p>
+    <h1>Οι αποστολές μου</h1>
+    <p class="note">Παίκτης: <strong th:text="${username}">χρήστης</strong></p>
+
+    <section aria-labelledby="active-title">
+        <h2 id="active-title">Ενεργές</h2>
+        <p id="no-active" th:if="${#lists.isEmpty(activeRuns)}">Δεν έχεις ενεργές αποστολές.</p>
+        <ul id="active-list" th:unless="${#lists.isEmpty(activeRuns)}">
+            <li th:each="run : ${activeRuns}">
+                <strong th:text="${run.missionTitle}">Αποστολή</strong>
+                · <span th:text="${run.statusLabel}">Ενεργή</span>
+                · ξεκίνησε <span th:text="${run.startedAt}">01/01/2026 12:00</span>
+            </li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="completed-title">
+        <h2 id="completed-title">Ολοκληρωμένες</h2>
+        <p id="no-completed" th:if="${#lists.isEmpty(completedRuns)}">Δεν έχεις ολοκληρωμένες αποστολές.</p>
+        <ul id="completed-list" th:unless="${#lists.isEmpty(completedRuns)}">
+            <li th:each="run : ${completedRuns}">
+                <strong th:text="${run.missionTitle}">Αποστολή</strong>
+                · <span th:text="${run.statusLabel}">Ολοκληρωμένη</span>
+                · ολοκληρώθηκε <span th:text="${run.completedAt}">01/01/2026 13:00</span>
+            </li>
+        </ul>
+    </section>
+</main>
+</body>
+</html>
