@@ -5,14 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.escapehub.team.domain.DuplicateJoinCodeException;
 import com.escapehub.team.domain.Team;
+import com.escapehub.team.infrastructure.FileTeamRepository;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-
-import com.escapehub.team.infrastructure.FileTeamRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -34,6 +34,16 @@ class FileTeamRepositoryTest {
         List<String> lines = Files.readAllLines(file);
         assertEquals(2, lines.size());
         assertTrue(lines.get(0).endsWith("|AAAAAA|42:CREATOR"));
+    }
+
+    @Test
+    void rejectsDuplicateJoinCodeWhenSavingNewTeam() {
+        FileTeamRepository repository =
+                new FileTeamRepository(tempDir.resolve("teams.txt").toString());
+        repository.save(Team.create("First", 1L, "AAAAAA"));
+
+        assertThrows(DuplicateJoinCodeException.class,
+                () -> repository.save(Team.create("Second", 2L, "AAAAAA")));
     }
 
     @Test
