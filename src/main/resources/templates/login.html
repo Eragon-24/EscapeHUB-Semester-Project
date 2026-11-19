@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Σύνδεση - EscapeHub</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="page-shell">
+    <section class="hero">
+        <h1>Σύνδεση</h1>
+        <p class="note" th:if="${param.error}" role="alert">Μη έγκυρο όνομα χρήστη ή κωδικός.</p>
+        <p class="note" th:if="${param.logout}" role="status">Αποσυνδέθηκες επιτυχώς.</p>
+        <form th:action="@{/login}" method="post" class="login-form">
+            <label for="username">Όνομα χρήστη</label>
+            <input type="text" id="username" name="username" required autofocus>
+            <label for="password">Κωδικός</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Σύνδεση</button>
+        </form>
+        <a class="health-link" th:href="@{/}">← Αρχική</a>
+    </section>
+</main>
+</body>
+</html>
