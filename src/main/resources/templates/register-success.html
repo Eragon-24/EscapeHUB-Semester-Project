@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Επιτυχής εγγραφή - EscapeHub</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <h1>Καλώς ήρθες, <span th:text="${username}">χρήστη</span>!</h1>
+    <p>Ο λογαριασμός σου δημιουργήθηκε επιτυχώς.</p>
+    <p><a th:href="@{/}">Μετάβαση στην Αρχική</a></p>
+</main>
+</body>
+</html>
