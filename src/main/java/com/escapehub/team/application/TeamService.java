@@ -1,5 +1,6 @@
 package com.escapehub.team.application;
 
+import com.escapehub.team.domain.DuplicateJoinCodeException;
 import com.escapehub.team.domain.Team;
 import com.escapehub.team.domain.TeamRepository;
 import java.security.SecureRandom;
@@ -42,8 +43,15 @@ public class TeamService {
             throw new IllegalArgumentException(
                     "Team name must be 1-" + MAX_NAME_LENGTH + " characters");
         }
-        Team team = Team.create(cleanName, creatorUserId, generateUniqueJoinCode());
-        return repository.save(team);
+        while (true) {
+            Team team = Team.create(cleanName, creatorUserId, generateUniqueJoinCode());
+            try {
+                return repository.save(team);
+            } catch (DuplicateJoinCodeException e) {
+                // A concurrent request may claim the code after the availability check.
+                continue;
+            }
+        }
     }
 
     private String generateUniqueJoinCode() {
