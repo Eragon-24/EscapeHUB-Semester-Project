@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escapehub.team.application.TeamService;
+import com.escapehub.team.domain.DuplicateJoinCodeException;
 import com.escapehub.team.domain.Team;
 import com.escapehub.team.domain.TeamRepository;
 import java.util.ArrayList;
@@ -19,9 +20,17 @@ class TeamServiceTest {
     private static class InMemoryTeamRepository implements TeamRepository {
         private final List<Team> saved = new ArrayList<>();
         private int codesReportedAsTaken;
+        private int duplicateSaveAttempts;
 
         @Override
         public Team save(Team team) {
+            if (duplicateSaveAttempts > 0) {
+                duplicateSaveAttempts--;
+                throw new DuplicateJoinCodeException(team.getJoinCode());
+            }
+            if (saved.stream().anyMatch(existing -> existing.getJoinCode().equals(team.getJoinCode()))) {
+                throw new DuplicateJoinCodeException(team.getJoinCode());
+            }
             team.setId((long) saved.size() + 1);
             saved.add(team);
             return team;
@@ -69,8 +78,17 @@ class TeamServiceTest {
     }
 
     @Test
-    void twoTeamsGetDifferentJoinCodes() {
+    void retriesWhenJoinCodeIsClaimedBeforeSave() {
+        repository.duplicateSaveAttempts = 1;
 
+        Team team = service.createTeam(1L, "Escapers");
+
+        assertNotNull(team.getId());
+        assertEquals(1, repository.saved.size());
+    }
+
+    @Test
+    void twoTeamsGetDifferentJoinCodes() {
         Team first = service.createTeam(1L, "A");
         Team second = service.createTeam(2L, "B");
         assertTrue(!first.getJoinCode().equals(second.getJoinCode()));
