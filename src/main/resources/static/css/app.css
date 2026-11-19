@@ -60,3 +60,11 @@ footer { position: fixed; bottom: 18px; color: #8a93a5; font-size: 0.82rem; }
 .clue-panel[hidden] { display: none; }
 .clue-panel h4 { margin: 0 0 6px; }
 .clue-panel p { margin: 0; line-height: 1.6; }
+
+/* Login (US-008) */
+.login-form { display: grid; gap: 8px; margin: 16px 0; }
+.login-form input { padding: 10px 12px; border: 1px solid #cdd3e0; border-radius: 10px; font: inherit; }
+.login-form button { margin-top: 8px; padding: 10px 14px; border: 0; border-radius: 10px; background: #3159a8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.inline-form { display: inline; }
+.link-button { background: none; border: 0; padding: 0; color: #3159a8; font: inherit; font-weight: 700; cursor: pointer; }
+.error { color: #b3261e; font-size: 0.9rem; }
