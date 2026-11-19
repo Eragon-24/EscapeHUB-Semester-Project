@@ -2,6 +2,7 @@ package com.escapehub.team.application;
 
 import com.escapehub.team.domain.Team;
 import com.escapehub.team.domain.TeamRepository;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,7 +41,8 @@ public class JoinTeamService {
             return INVALID_CODE_MESSAGE;
         }
 
-        final Team team = teamRepository.findByJoinCode(code).orElse(null);
+        final String normalizedCode = code.trim().toUpperCase(Locale.ROOT);
+        final Team team = teamRepository.findByJoinCode(normalizedCode).orElse(null);
         if (team == null) {
             return INVALID_CODE_MESSAGE;
         }
