@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εγγραφή - EscapeHub</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <p><a th:href="@{/}">← Επιστροφή στην Αρχική</a></p>
+    <h1>Δημιουργία λογαριασμού</h1>
+    <form th:action="@{/register}" th:object="${form}" method="post" novalidate>
+        <p>
+            <label for="username">Όνομα χρήστη</label><br>
+            <input id="username" type="text" th:field="*{username}" autocomplete="username">
+            <span class="error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+        </p>
+        <p>
+            <label for="email">Email</label><br>
+            <input id="email" type="email" th:field="*{email}" autocomplete="email">
+            <span class="error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+        </p>
+        <p>
+            <label for="password">Κωδικός (τουλάχιστον 8 χαρακτήρες)</label><br>
+            <input id="password" type="password" name="password" autocomplete="new-password">
+            <span class="error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+        </p>
+        <button type="submit">Εγγραφή</button>
+    </form>
+</main>
+</body>
+</html>
