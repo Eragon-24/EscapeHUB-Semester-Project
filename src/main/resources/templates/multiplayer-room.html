@@ -77,6 +77,37 @@
                 </p>
             </section>
 
+            <section class="room-card inspection-card" aria-labelledby="inspection-heading">
+                <h2 id="inspection-heading">Αντικείμενα προς εξέταση</h2>
+                <p class="muted-message">
+                    Επίλεξε ένα αντικείμενο κοντά στον χαρακτήρα σου για να δεις τις
+                    διαθέσιμες πληροφορίες του.
+                </p>
+                <ul id="inspectable-objects" class="inspectable-objects">
+                    <li th:each="object : ${roomObjects}">
+                        <button type="button"
+                                class="inspect-object-button"
+                                th:attr="data-object-id=${object.id}"
+                                th:text="${object.name}">
+                            Εξέταση αντικειμένου
+                        </button>
+                    </li>
+                </ul>
+                <p id="inspection-status"
+                   class="inspection-status"
+                   role="status"
+                   aria-live="polite">
+                    Διάλεξε ένα αντικείμενο για να ξεκινήσει η εξέταση.
+                </p>
+                <article id="inspection-details"
+                         class="inspection-details"
+                         aria-live="polite"
+                         hidden>
+                    <h3 id="inspection-name"></h3>
+                    <p id="inspection-description"></p>
+                </article>
+            </section>
+
             <section class="room-card">
                 <h2>Επεκτάσεις multiplayer</h2>
                 <p class="muted-message">
