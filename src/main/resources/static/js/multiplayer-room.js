@@ -2,11 +2,74 @@
     'use strict';
 
     var canvas = document.getElementById('room-canvas');
-    if (!canvas) {
-        return;
+    var context = canvas ? canvas.getContext('2d') : null;
+
+    var objectList = document.getElementById('inspectable-objects');
+    var inspectionStatus = document.getElementById('inspection-status');
+    var inspectionDetails = document.getElementById('inspection-details');
+    var inspectionName = document.getElementById('inspection-name');
+    var inspectionDescription = document.getElementById('inspection-description');
+    var pendingObjectId = null;
+
+    if (objectList && inspectionStatus && inspectionDetails
+            && inspectionName && inspectionDescription) {
+        objectList.addEventListener('click', function (event) {
+            var button = event.target.closest('.inspect-object-button');
+            if (!button || !objectList.contains(button) || pendingObjectId !== null) {
+                return;
+            }
+
+            var objectId = button.getAttribute('data-object-id');
+            if (!objectId) {
+                inspectionStatus.textContent = 'Το αντικείμενο δεν είναι διαθέσιμο για εξέταση.';
+                return;
+            }
+
+            pendingObjectId = objectId;
+            inspectionDetails.hidden = true;
+            inspectionStatus.textContent = 'Έλεγχος δυνατότητας εξέτασης...';
+            setInspectionButtonsDisabled(true);
+            window.dispatchEvent(new CustomEvent('room:inspect-object', {
+                detail: { objectId: objectId }
+            }));
+        });
+
+        window.addEventListener('room:inspection-result', function (event) {
+            var result = event.detail;
+            if (!result || pendingObjectId === null
+                    || String(result.objectId) !== pendingObjectId) {
+                return;
+            }
+
+            pendingObjectId = null;
+            setInspectionButtonsDisabled(false);
+            inspectionDetails.hidden = true;
+
+            if (result.success === true
+                    && typeof result.name === 'string'
+                    && typeof result.description === 'string') {
+                inspectionName.textContent = result.name;
+                inspectionDescription.textContent = result.description;
+                inspectionDetails.hidden = false;
+                inspectionStatus.textContent = 'Οι πληροφορίες του αντικειμένου εμφανίζονται παρακάτω.';
+                return;
+            }
+
+            inspectionStatus.textContent = typeof result.message === 'string'
+                ? result.message
+                : 'Το αντικείμενο δεν μπορεί να εξεταστεί αυτή τη στιγμή.';
+        });
     }
 
-    var context = canvas.getContext('2d');
+    function setInspectionButtonsDisabled(disabled) {
+        if (!objectList) {
+            return;
+        }
+        objectList.querySelectorAll('.inspect-object-button').forEach(function (button) {
+            button.disabled = disabled;
+        });
+    }
+
     if (!context) {
         return;
     }
