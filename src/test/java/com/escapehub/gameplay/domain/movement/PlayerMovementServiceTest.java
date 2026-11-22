@@ -1,6 +1,7 @@
 package com.escapehub.gameplay.domain.movement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
@@ -87,7 +88,7 @@ class PlayerMovementServiceTest {
 
         final PlayerPosition result = service.move(start, new MovementInput(0, 0), 5);
 
-        org.junit.jupiter.api.Assertions.assertSame(start, result);
+        assertSame(start, result);
     }
 
     @Test
