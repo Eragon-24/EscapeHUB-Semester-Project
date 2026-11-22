@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -50,6 +51,16 @@ public class SessionPlayerPositions {
     public void removePlayer(final String username) {
         final String cleanUsername = normalizeUsername(username);
         positions.remove(cleanUsername);
+    }
+
+    /**
+     * Retains only positions belonging to currently active session participants.
+     *
+     * @param activePlayers set of usernames still participating in the session
+     */
+    public void retainPlayers(final Set<String> activePlayers) {
+        Objects.requireNonNull(activePlayers, "Active players must not be null");
+        positions.keySet().retainAll(activePlayers);
     }
 
     /**

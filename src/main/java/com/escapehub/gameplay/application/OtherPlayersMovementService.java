@@ -1,45 +1,62 @@
 package com.escapehub.gameplay.application;
 
+import com.escapehub.gameplay.domain.GameSession;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.movement.OtherPlayerView;
 import com.escapehub.gameplay.domain.movement.PlayerPosition;
 import com.escapehub.gameplay.domain.movement.SessionPlayerPositions;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
  * US-017: Application service for recording player movements and querying
- * other players' current positions within a game session.
+ * other players' current positions within an active game session.
  */
 @Service
 public class OtherPlayersMovementService {
 
     private final SessionPlayerPositionsRepository repository;
+    private final GameSessionRepository gameSessionRepository;
+    private final SessionParticipantsRepository participantsRepository;
 
     /**
-     * Creates the service backed by a player-positions repository.
+     * Creates the service backed by session, participant, and position repositories.
      *
      * @param repository storage port for session player positions
+     * @param gameSessionRepository repository for game sessions
+     * @param participantsRepository repository for session participants
      */
-    public OtherPlayersMovementService(final SessionPlayerPositionsRepository repository) {
+    public OtherPlayersMovementService(
+            final SessionPlayerPositionsRepository repository,
+            final GameSessionRepository gameSessionRepository,
+            final SessionParticipantsRepository participantsRepository) {
         this.repository = Objects.requireNonNull(repository, "Repository must not be null");
+        this.gameSessionRepository = Objects.requireNonNull(
+                gameSessionRepository, "Game session repository must not be null");
+        this.participantsRepository = Objects.requireNonNull(
+                participantsRepository, "Participants repository must not be null");
     }
 
     /**
-     * Records a player's updated position in the given session.
+     * Records a participant's updated position in the given active session.
      *
      * @param sessionId unique session identifier
-     * @param username player's username
+     * @param username authenticated player's username
      * @param position player's new room coordinates
      */
     public synchronized void updatePlayerPosition(
             final UUID sessionId,
             final String username,
             final PlayerPosition position) {
-        Objects.requireNonNull(sessionId, "Session id must not be null");
+        final Set<String> activePlayers = requireActiveParticipant(sessionId, username);
         final SessionPlayerPositions tracked = repository.findBySessionId(sessionId)
                 .orElseGet(() -> new SessionPlayerPositions(sessionId));
+        tracked.retainPlayers(activePlayers);
         tracked.updatePosition(username, position);
         repository.save(tracked);
     }
@@ -52,6 +69,10 @@ public class OtherPlayersMovementService {
      */
     public synchronized void removePlayer(final UUID sessionId, final String username) {
         Objects.requireNonNull(sessionId, "Session id must not be null");
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username must not be blank");
+        }
+        requireExistingSession(sessionId);
         repository.findBySessionId(sessionId).ifPresent(tracked -> {
             tracked.removePlayer(username);
             repository.save(tracked);
@@ -59,7 +80,7 @@ public class OtherPlayersMovementService {
     }
 
     /**
-     * Retrieves the latest positions of all other players in the session.
+     * Retrieves the latest positions of all other active players in the session.
      *
      * @param sessionId unique session identifier
      * @param viewerUsername authenticated viewer's username
@@ -68,12 +89,47 @@ public class OtherPlayersMovementService {
     public synchronized List<OtherPlayerView> getOtherPlayersPositions(
             final UUID sessionId,
             final String viewerUsername) {
-        Objects.requireNonNull(sessionId, "Session id must not be null");
-        if (viewerUsername == null || viewerUsername.isBlank()) {
-            throw new IllegalArgumentException("Viewer username must not be blank");
+        final Set<String> activePlayers = requireActiveParticipant(sessionId, viewerUsername);
+        final Optional<SessionPlayerPositions> trackedOptional =
+                repository.findBySessionId(sessionId);
+        if (trackedOptional.isEmpty()) {
+            return List.of();
         }
-        return repository.findBySessionId(sessionId)
-                .map(tracked -> tracked.getOtherPlayers(viewerUsername))
-                .orElseGet(List::of);
+        final SessionPlayerPositions tracked = trackedOptional.get();
+        tracked.retainPlayers(activePlayers);
+        repository.save(tracked);
+        return tracked.getOtherPlayers(viewerUsername);
+    }
+
+    private GameSession requireExistingSession(final UUID sessionId) {
+        Objects.requireNonNull(sessionId, "Session id must not be null");
+        return gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("Η συνεδρία δεν βρέθηκε."));
+    }
+
+    private Set<String> requireActiveParticipant(final UUID sessionId, final String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Απαιτείται σύνδεση χρήστη.");
+        }
+        final GameSession session = requireExistingSession(sessionId);
+        final String cleanUsername = username.trim();
+        final Optional<SessionParticipants> participantsOptional =
+                participantsRepository.findBySessionId(sessionId);
+
+        if (participantsOptional.isPresent()) {
+            final SessionParticipants participants = participantsOptional.get();
+            if (!participants.isActive()) {
+                throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
+            }
+            if (!participants.getPlayers().contains(cleanUsername)) {
+                throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
+            }
+            return participants.getPlayers();
+        }
+
+        if (!session.creatorUsername().equals(cleanUsername)) {
+            throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
+        }
+        return Set.of(session.creatorUsername());
     }
 }

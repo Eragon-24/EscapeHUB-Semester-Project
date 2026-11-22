@@ -11,6 +11,27 @@
         return;
     }
 
+    var sessionId = canvas.getAttribute('data-session-id');
+    var playerRadius = 18;
+    var moveStep = 12;
+    var localPlayer = { x: 480, y: 490 };
+    var otherPlayers = [];
+    var pollIntervalMs = 300;
+    var obstacles = [
+        { minX: 150, minY: 180, maxX: 420, maxY: 290 },
+        { minX: 680, minY: 195, maxX: 820, maxY: 305 },
+        { minX: 430, minY: 92, maxX: 530, maxY: 142 }
+    ];
+
+    function getCsrfHeaders() {
+        var headers = { 'Content-Type': 'application/json' };
+        var csrfInput = document.querySelector('input[name="_csrf"]');
+        if (csrfInput && csrfInput.value) {
+            headers['X-CSRF-TOKEN'] = csrfInput.value;
+        }
+        return headers;
+    }
+
     function drawGrid() {
         context.strokeStyle = '#3a4448';
         context.lineWidth = 1;
@@ -126,5 +147,152 @@
         context.fillText('ΕΞΟΔΟΣ', 458, 78);
     }
 
-    drawRoom();
+    function drawPlayerAvatar(x, y, label, fillColor, strokeColor) {
+        context.fillStyle = 'rgba(15, 18, 20, 0.55)';
+        context.beginPath();
+        context.ellipse(x, y + 14, 18, 7, 0, 0, Math.PI * 2);
+        context.fill();
+
+        context.fillStyle = fillColor;
+        context.beginPath();
+        context.arc(x, y, playerRadius, 0, Math.PI * 2);
+        context.fill();
+
+        context.strokeStyle = strokeColor;
+        context.lineWidth = 3;
+        context.stroke();
+
+        context.fillStyle = '#f4f7f5';
+        context.font = 'bold 12px sans-serif';
+        context.textAlign = 'center';
+        context.fillText(label, x, y - 24);
+        context.textAlign = 'start';
+    }
+
+    function render() {
+        drawRoom();
+        if (!sessionId) {
+            return;
+        }
+        otherPlayers.forEach(function (player) {
+            if (player && player.position) {
+                drawPlayerAvatar(
+                    player.position.x,
+                    player.position.y,
+                    player.username,
+                    '#d97757',
+                    '#f6c2a8'
+                );
+            }
+        });
+        drawPlayerAvatar(localPlayer.x, localPlayer.y, 'Εσύ', '#2a9d8f', '#a8e6cf');
+    }
+
+    function canMoveTo(x, y) {
+        if (x < 75 + playerRadius || x > 885 - playerRadius
+            || y < 95 + playerRadius || y > 570 - playerRadius) {
+            return false;
+        }
+        return obstacles.every(function (obstacle) {
+            return !(x + playerRadius > obstacle.minX
+                && x - playerRadius < obstacle.maxX
+                && y + playerRadius > obstacle.minY
+                && y - playerRadius < obstacle.maxY);
+        });
+    }
+
+    function pushLocalPosition() {
+        if (!sessionId) {
+            return;
+        }
+        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/player-position', {
+            method: 'PUT',
+            headers: getCsrfHeaders(),
+            body: JSON.stringify({ x: localPlayer.x, y: localPlayer.y })
+        }).catch(function () {
+            // Ignore transient network errors during live updates
+        });
+    }
+
+    function fetchOtherPlayers() {
+        if (!sessionId) {
+            return;
+        }
+        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/other-players', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return null;
+                }
+                return response.json();
+            })
+            .then(function (players) {
+                if (Array.isArray(players)) {
+                    otherPlayers = players;
+                    render();
+                }
+            })
+            .catch(function () {
+                // Ignore transient polling errors
+            });
+    }
+
+    function removeLocalPositionOnLeave() {
+        if (!sessionId) {
+            return;
+        }
+        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/player-position', {
+            method: 'DELETE',
+            headers: getCsrfHeaders(),
+            keepalive: true
+        }).catch(function () {
+            // Best-effort cleanup on page exit
+        });
+    }
+
+    if (sessionId) {
+        window.addEventListener('keydown', function (event) {
+            if (event.target && (event.target.tagName === 'INPUT'
+                || event.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+            var dx = 0;
+            var dy = 0;
+            if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'W') {
+                dy = -moveStep;
+            } else if (event.key === 'ArrowDown' || event.key === 's' || event.key === 'S') {
+                dy = moveStep;
+            } else if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
+                dx = -moveStep;
+            } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
+                dx = moveStep;
+            } else {
+                return;
+            }
+
+            event.preventDefault();
+            var moved = false;
+            if (dx !== 0 && canMoveTo(localPlayer.x + dx, localPlayer.y)) {
+                localPlayer.x += dx;
+                moved = true;
+            }
+            if (dy !== 0 && canMoveTo(localPlayer.x, localPlayer.y + dy)) {
+                localPlayer.y += dy;
+                moved = true;
+            }
+            if (moved) {
+                render();
+                pushLocalPosition();
+            }
+        });
+
+        window.addEventListener('pagehide', removeLocalPositionOnLeave);
+        pushLocalPosition();
+        fetchOtherPlayers();
+        window.setInterval(fetchOtherPlayers, pollIntervalMs);
+    }
+
+    render();
 })();

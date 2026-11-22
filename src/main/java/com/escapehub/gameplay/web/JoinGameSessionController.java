@@ -50,6 +50,7 @@ public class JoinGameSessionController {
                     joinCode.trim().toUpperCase(Locale.ROOT)
             );
             redirectAttributes.addFlashAttribute("sessionPlayers", participants.getPlayers());
+            redirectAttributes.addFlashAttribute("joinedSessionId", participants.getSessionId());
         } catch (final IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("joinErrorMessage", exception.getMessage());
         }
