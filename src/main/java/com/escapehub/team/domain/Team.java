@@ -72,12 +72,20 @@ public class Team {
     public String getName() {
         return name;
     }
-     public boolean removeMember(long userId)
-     {
-         members.removeIf(member -> member.userId()==userId);
 
-         return false;
-     }
+    /**
+     * Removes a member from the team.
+     *
+     * @param userId the ID of the member to remove
+     * @return true if a member was removed, false if the user was not a member
+     */
+    public boolean removeMember(long userId) {
+        if (!isMember(userId)) {
+            return false;
+        }
+        members.removeIf(member -> member.userId() == userId);
+        return true;
+    }
 
     public String getJoinCode() {
         return joinCode;
@@ -95,5 +103,4 @@ public class Team {
     public boolean isCreator(long userId) {
         return members.stream().anyMatch(m -> m.userId() == userId && m.role() == Role.CREATOR);
     }
-
 }
