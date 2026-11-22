@@ -1,56 +1,163 @@
 package com.escapehub.gameplay.web;
 
+
+
 import com.escapehub.gameplay.application.GameSessionNotFoundException;
+
 import com.escapehub.gameplay.application.GameStateService;
+
 import com.escapehub.gameplay.application.JoinGameSessionService;
+
 import com.escapehub.gameplay.domain.SessionParticipants;
+
 import java.security.Principal;
+
 import java.util.Locale;
+
 import org.springframework.stereotype.Controller;
+
 import org.springframework.web.bind.annotation.PostMapping;
+
 import org.springframework.web.bind.annotation.RequestParam;
+
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+
+
 @Controller
+
 public class JoinGameSessionController {
 
+
+
     private final JoinGameSessionService joinGameSessionService;
+
     private final GameStateService gameStateService;
 
+
+
     public JoinGameSessionController(
+
             final JoinGameSessionService joinGameSessionService,
+
             final GameStateService gameStateService) {
+
         this.joinGameSessionService = joinGameSessionService;
+
         this.gameStateService = gameStateService;
+
     }
+
+
 
     @PostMapping("/game-sessions/join")
+
     public String joinGameSession(
+
             @RequestParam(name = "joinCode", required = false) final String joinCode,
+
             final Principal principal,
+
             final RedirectAttributes redirectAttributes) {
+
         if (!isAuthenticated(principal)) {
+
             return "redirect:/login";
+
         }
+
+
+
         try {
+
             final SessionParticipants participants = joinGameSessionService
+
                     .joinSession(joinCode, principal.getName());
+
+
+
+            final String normalizedJoinCode =
+
+                    joinCode.trim().toUpperCase(Locale.ROOT);
+
+
+
             redirectAttributes.addFlashAttribute(
+
                     "joinedSessionCode",
-                    joinCode.trim().toUpperCase(Locale.ROOT)
+
+                    normalizedJoinCode
+
             );
-            redirectAttributes.addFlashAttribute("sessionPlayers", participants.getPlayers());
-            gameStateService.enterGame(joinCode, principal.getName());
-            return "redirect:/multiplayer-room?session="
-                    + joinCode.trim().toUpperCase(Locale.ROOT);
+
+            redirectAttributes.addFlashAttribute(
+
+                    "sessionPlayers",
+
+                    participants.getPlayers()
+
+            );
+
+            redirectAttributes.addFlashAttribute(
+
+                    "joinedSessionId",
+
+                    participants.getSessionId().toString()
+
+            );
+
+
+
+            gameStateService.enterGame(
+
+                    normalizedJoinCode,
+
+                    principal.getName()
+
+            );
+
+
+
+            redirectAttributes.addAttribute("session", normalizedJoinCode);
+
+            redirectAttributes.addAttribute(
+
+                    "sessionId",
+
+                    participants.getSessionId().toString()
+
+            );
+
+
+
         } catch (final IllegalArgumentException | IllegalStateException
+
                        | GameSessionNotFoundException exception) {
-            redirectAttributes.addFlashAttribute("joinErrorMessage", exception.getMessage());
+
+            redirectAttributes.addFlashAttribute(
+
+                    "joinErrorMessage",
+
+                    exception.getMessage()
+
+            );
+
         }
+
+
+
         return "redirect:/multiplayer-room";
+
     }
 
+
+
     private boolean isAuthenticated(final Principal principal) {
-        return principal != null && !"anonymousUser".equals(principal.getName());
+
+        return principal != null
+
+                && !"anonymousUser".equals(principal.getName());
+
     }
+
 }

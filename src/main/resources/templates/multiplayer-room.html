@@ -21,11 +21,12 @@
             <canvas id="room-canvas"
                     width="960"
                     height="640"
-                    aria-label="Στατική απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
+                    th:data-session-id="${joinedSessionId != null ? joinedSessionId : createdSessionId}"
+                    aria-label="Απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
             </canvas>
-            <p class="board-caption">
-                Βασική οπτική απεικόνιση του δωματίου. Η κίνηση και οι αλληλεπιδράσεις
-                θα συνδεθούν από τα αντίστοιχα User Stories.
+            <p class="board-caption" id="movement-status">
+                Δημιούργησε ή μπες σε μια συνεδρία και χρησιμοποίησε WASD / βελάκια για κίνηση.
+                Οι υπόλοιποι παίκτες εμφανίζονται ζωντανά στον χώρο.
             </p>
         </div>
 
