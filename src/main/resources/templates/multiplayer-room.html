@@ -21,7 +21,7 @@
             <canvas id="room-canvas"
                     width="960"
                     height="640"
-                    th:attr="data-session-id=${param.sessionId != null ? param.sessionId[0] : (joinedSessionId != null ? joinedSessionId : createdSessionId)}"
+                    th:data-session-id="${joinedSessionId != null ? joinedSessionId : createdSessionId}"
                     aria-label="Απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
             </canvas>
             <p class="board-caption" id="movement-status">
