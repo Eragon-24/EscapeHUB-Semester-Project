@@ -1,0 +1,120 @@
+/*
+ * US-015: browser side of the real-time shared game state.
+ *
+ * Opens one Server-Sent Events connection for the player's game session and keeps a local COPY of the state.
+ * The server stays authoritative: send() only asks the server to change the state, and the local copy changes
+ * only when the server publishes an update. Later gameplay stories use window.EscapeHubSharedState.
+ */
+(function () {
+    'use strict';
+
+    var card = document.getElementById('shared-state-card');
+    if (!card) {
+        return;
+    }
+
+    var sessionId = card.getAttribute('data-session-id');
+    var statusElement = document.getElementById('shared-state-status');
+    var listElement = document.getElementById('shared-state-list');
+    var csrfToken = metaContent('_csrf');
+    var csrfHeader = metaContent('_csrf_header');
+
+    var state = {};
+    var version = 0;
+    var listeners = [];
+    var source = null;
+
+    function metaContent(name) {
+        var meta = document.querySelector('meta[name="' + name + '"]');
+        return meta ? meta.getAttribute('content') : null;
+    }
+
+    function setStatus(text) {
+        if (statusElement) {
+            statusElement.textContent = text;
+        }
+    }
+
+    function render() {
+        if (!listElement) {
+            return;
+        }
+        listElement.textContent = '';
+        Object.keys(state).forEach(function (key) {
+            var item = document.createElement('li');
+            item.textContent = key + ' = ' + state[key];
+            listElement.appendChild(item);
+        });
+    }
+
+    function notify(update) {
+        listeners.forEach(function (listener) {
+            listener(update, state);
+        });
+    }
+
+    function onSnapshot(event) {
+        var snapshot = JSON.parse(event.data);
+        state = snapshot.attributes || {};
+        version = snapshot.version;
+        render();
+        setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
+    }
+
+    function onUpdate(event) {
+        var update = JSON.parse(event.data);
+        if (update.version <= version) {
+            return; // already included in the snapshot or already applied
+        }
+        version = update.version;
+        state[update.key] = update.value;
+        render();
+        setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
+        notify(update);
+    }
+
+    function connect() {
+        if (!sessionId || typeof EventSource === 'undefined') {
+            setStatus('Συγχρονισμός: μη διαθέσιμος');
+            return;
+        }
+        source = new EventSource('/game-sessions/' + encodeURIComponent(sessionId) + '/events');
+        source.addEventListener('snapshot', onSnapshot);
+        source.addEventListener('update', onUpdate);
+        source.onerror = function () {
+            // The browser reconnects automatically and the server sends a fresh snapshot.
+            setStatus('Συγχρονισμός: επανασύνδεση...');
+        };
+    }
+
+    function send(key, value) {
+        var headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken;
+        }
+        return fetch('/game-sessions/' + encodeURIComponent(sessionId) + '/state', {
+            method: 'POST',
+            headers: headers,
+            body: 'key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value)
+        }).then(function (response) {
+            return response.json().then(function (body) {
+                if (!response.ok) {
+                    throw new Error(body.error || 'Η αλλαγή απορρίφθηκε.');
+                }
+                return body;
+            });
+        });
+    }
+
+    window.EscapeHubSharedState = {
+        send: send,
+        onUpdate: function (listener) {
+            listeners.push(listener);
+        },
+        current: function () {
+            return {version: version, values: Object.assign({}, state)};
+        }
+    };
+
+    connect();
+})();
