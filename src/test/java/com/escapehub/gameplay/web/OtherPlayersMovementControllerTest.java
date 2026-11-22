@@ -99,6 +99,8 @@ class OtherPlayersMovementControllerTest {
     void shouldReturnUnauthorizedForUnauthenticatedRequests() throws Exception {
         mockMvc.perform(get("/api/v1/game-sessions/{id}/other-players", session.id()))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/v1/game-sessions/{id}/player-position", session.id()))
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(put("/api/v1/game-sessions/{id}/player-position", session.id())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,6 +120,9 @@ class OtherPlayersMovementControllerTest {
         mockMvc.perform(get("/api/v1/game-sessions/{id}/other-players", UUID.randomUUID())
                         .principal(player1))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/game-sessions/{id}/player-position", session.id())
+                        .principal(intruder))
+                .andExpect(status().isForbidden());
     }
 
     @Test

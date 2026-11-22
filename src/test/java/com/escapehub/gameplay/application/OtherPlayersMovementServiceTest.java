@@ -99,8 +99,7 @@ class OtherPlayersMovementServiceTest {
         );
         assertThrows(
                 SecurityException.class,
-                () -> service.updatePlayerPosition(
-                        session.id(), "intruder", new PlayerPosition(480, 490))
+                () -> service.removePlayer(session.id(), "intruder")
         );
     }
 

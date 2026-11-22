@@ -287,18 +287,6 @@
                 // Ignore transient polling errors
             });
     }
-    function removeLocalPositionOnLeave() {
-        if (!sessionId) {
-            return;
-        }
-        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/player-position', {
-            method: 'DELETE',
-            headers: getCsrfHeaders(),
-            keepalive: true
-        }).catch(function () {
-            // Best-effort cleanup on page exit
-        });
-    }
 
     if (sessionId) {
         window.addEventListener('keydown', function (event) {
@@ -336,11 +324,16 @@
             }
         });
 
-        window.addEventListener('pagehide', removeLocalPositionOnLeave);
-        pushLocalPosition();
-        fetchOtherPlayers();
-        window.setInterval(fetchOtherPlayers, pollIntervalMs);
-    }
+        if (moved) {
+            render();
+            pushLocalPosition();
+        }
+    });
 
-    render();
+    pushLocalPosition();
+    fetchOtherPlayers();
+    window.setInterval(fetchOtherPlayers, pollIntervalMs);
+}
+
+render();
 })();

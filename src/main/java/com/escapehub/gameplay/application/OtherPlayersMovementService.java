@@ -90,17 +90,13 @@ public class OtherPlayersMovementService {
     }
 
     /**
-     * Removes a player from the session's visible players.
+     * Removes a participant from the session's visible players.
      *
      * @param sessionId unique session identifier
-     * @param username player's username
+     * @param username authenticated participant's username
      */
     public synchronized void removePlayer(final UUID sessionId, final String username) {
-        Objects.requireNonNull(sessionId, "Session id must not be null");
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("Username must not be blank");
-        }
-        requireExistingSession(sessionId);
+        requireActiveParticipant(sessionId, username);
         repository.findBySessionId(sessionId).ifPresent(tracked -> {
             tracked.removePlayer(username);
             repository.save(tracked);
