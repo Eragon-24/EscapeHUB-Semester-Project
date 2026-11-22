@@ -11,13 +11,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-
 @Controller
 public class JoinGameSessionController {
 
     private final JoinGameSessionService joinGameSessionService;
     private final GameStateService gameStateService;
-
 
     public JoinGameSessionController(
             final JoinGameSessionService joinGameSessionService,
@@ -25,7 +23,6 @@ public class JoinGameSessionController {
         this.joinGameSessionService = joinGameSessionService;
         this.gameStateService = gameStateService;
     }
-
 
     @PostMapping("/game-sessions/join")
     public String joinGameSession(
@@ -43,9 +40,9 @@ public class JoinGameSessionController {
                     joinCode.trim().toUpperCase(Locale.ROOT)
             );
             redirectAttributes.addFlashAttribute("sessionPlayers", participants.getPlayers());
-            redirectAttributes.addFlashAttribute(
-                    "gameState",
-                    gameStateService.enterGame(joinCode, principal.getName()));
+            gameStateService.enterGame(joinCode, principal.getName());
+            return "redirect:/multiplayer-room?session="
+                    + joinCode.trim().toUpperCase(Locale.ROOT);
         } catch (final IllegalArgumentException | IllegalStateException
                        | GameSessionNotFoundException exception) {
             redirectAttributes.addFlashAttribute("joinErrorMessage", exception.getMessage());

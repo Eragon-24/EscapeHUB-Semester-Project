@@ -38,13 +38,12 @@ class JoinGameSessionControllerTest {
 
         final String result = controller.joinGameSession("abc234", () -> "player2", attributes);
 
-        assertEquals("redirect:/multiplayer-room", result);
+        assertEquals("redirect:/multiplayer-room?session=ABC234", result);
         assertEquals("ABC234", attributes.getFlashAttributes().get("joinedSessionCode"));
         assertEquals(
                 participants.getPlayers(),
                 attributes.getFlashAttributes().get("sessionPlayers")
         );
-        assertEquals(state, attributes.getFlashAttributes().get("gameState"));
         verify(service).joinSession("abc234", "player2");
         verify(gameStateService).enterGame("abc234", "player2");
     }

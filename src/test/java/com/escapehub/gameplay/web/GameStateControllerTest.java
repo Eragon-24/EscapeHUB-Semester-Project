@@ -1,15 +1,18 @@
 package com.escapehub.gameplay.web;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.escapehub.gameplay.application.CreateGameSessionService;
+import com.escapehub.gameplay.application.GameStateService;
 import com.escapehub.gameplay.application.JoinGameSessionService;
 import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
@@ -33,6 +36,9 @@ class GameStateControllerTest {
 
     @Autowired
     private JoinGameSessionService joinService;
+
+    @Autowired
+    private GameStateService gameStateService;
 
     private MockMvc mockMvc;
 
@@ -82,5 +88,27 @@ class GameStateControllerTest {
         mockMvc.perform(post("/game-sessions/%20/game")
                         .with(user("http_carol")).with(csrf()))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void roomPageLoadsExistingStateAfterRefreshWithoutReset() throws Exception {
+        final GameSession session = createService.createSession("refresh_alice");
+        final String code = session.joinCode();
+        final String url = "/game-sessions/" + code + "/game";
+        mockMvc.perform(post(url).with(user("refresh_alice")).with(csrf()))
+                .andExpect(status().isOk());
+        gameStateService.changeRoom(code, "refresh_alice", "vault");
+
+        for (int refresh = 0; refresh < 2; refresh++) {
+            mockMvc.perform(get("/multiplayer-room").param("session", code)
+                            .with(user("refresh_alice")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("data-endpoint=\"/game-sessions/"
+                            + code + "/game\"")));
+            mockMvc.perform(get(url).with(user("refresh_alice")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.currentRoomId").value("vault"))
+                    .andExpect(jsonPath("$.version").value(1));
+        }
     }
 }

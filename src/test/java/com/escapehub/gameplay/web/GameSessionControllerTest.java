@@ -40,10 +40,9 @@ class GameSessionControllerTest {
 
         final String result = controller.createGameSession(() -> "playerOne", attributes);
 
-        assertEquals("redirect:/multiplayer-room", result);
+        assertEquals("redirect:/multiplayer-room?session=ABC234", result);
         assertEquals("ABC234", attributes.getFlashAttributes().get("createdSessionCode"));
         assertEquals(session.id().toString(), attributes.getFlashAttributes().get("createdSessionId"));
-        assertEquals(state, attributes.getFlashAttributes().get("gameState"));
         verify(service).createSession("playerOne");
         verify(gameStateService).enterGame("ABC234", "playerOne");
     }

@@ -32,10 +32,8 @@ public class GameSessionController {
         final GameSession session = createGameSessionService.createSession(principal.getName());
         redirectAttributes.addFlashAttribute("createdSessionCode", session.joinCode());
         redirectAttributes.addFlashAttribute("createdSessionId", session.id().toString());
-        redirectAttributes.addFlashAttribute(
-                "gameState",
-                gameStateService.enterGame(session.joinCode(), principal.getName()));
-        return "redirect:/multiplayer-room";
+        gameStateService.enterGame(session.joinCode(), principal.getName());
+        return "redirect:/multiplayer-room?session=" + session.joinCode();
     }
 
     private boolean isAuthenticated(final Principal principal) {

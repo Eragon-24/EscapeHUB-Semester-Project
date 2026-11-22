@@ -59,11 +59,11 @@
                         <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
                     </ul>
                 </div>
-                <p th:if="${gameState != null}">
-                    Κοινή κατάσταση παιχνιδιού: δωμάτιο
-                    <code th:text="${gameState.currentRoomId()}">abandoned-laboratory</code>
-                    (έκδοση <span th:text="${gameState.version()}">0</span>)
-                </p>
+                <div id="game-state"
+                     th:if="${activeSessionCode != null}"
+                     th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
+                    <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
+                </div>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
@@ -96,5 +96,6 @@
     </section>
 </main>
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
+<script th:src="@{/js/game-state.js}" defer></script>
 </body>
 </html>
