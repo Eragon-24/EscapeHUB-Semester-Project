@@ -197,6 +197,36 @@ class SharedStateServiceTest {
     }
 
     @Test
+    void clientCannotWriteServerOwnedKeys() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "puzzle.chest", "solved"));
+
+        assertTrue(received.isEmpty());
+        assertEquals(0, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
+    void serverCanWriteServerOwnedKeysAndTheyAreBroadcast() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final SharedStateUpdate update = service.applyServerChange(session.id(), "alice", "puzzle.chest", "solved");
+
+        assertEquals(List.of(update), received);
+        assertEquals("solved", service.snapshot(session.id(), "bob").values().get("puzzle.chest"));
+    }
+
+    @Test
+    void serverChangeStillRequiresAnActiveParticipantAndAValidKey() {
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyServerChange(session.id(), "mallory", "puzzle.chest", "solved"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyServerChange(session.id(), "alice", "bad key!", "solved"));
+        assertEquals(0, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
     void concurrentChangesGetUniqueConsecutiveVersionsAndArriveInOrder() throws Exception {
         final int attempts = 30;
         final List<SharedStateUpdate> received = java.util.Collections.synchronizedList(new ArrayList<>());

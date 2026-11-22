@@ -87,6 +87,13 @@
                 <ul id="shared-state-list"></ul>
             </section>
 
+            <section class="room-card" id="puzzle-card"
+                     th:if="${createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${createdSessionId != null ? createdSessionId : joinedSessionId}">
+                <h2>Γρίφοι (US-022)</h2>
+                <div id="puzzle-list"></div>
+            </section>
+
             <section class="room-card">
                 <h2>Επεκτάσεις multiplayer</h2>
                 <p class="muted-message">
@@ -102,5 +109,6 @@
 </main>
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
+<script th:src="@{/js/puzzle-submit.js}" defer></script>
 </body>
 </html>
