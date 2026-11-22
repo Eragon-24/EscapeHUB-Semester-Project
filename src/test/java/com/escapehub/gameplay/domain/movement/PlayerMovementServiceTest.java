@@ -78,7 +78,8 @@ class PlayerMovementServiceTest {
                 5
         );
 
-        assertEquals(new PlayerPosition(35, 55), result);
+        assertEquals(35, result.x(), 0.000000001);
+        assertEquals(50 + 5 / Math.sqrt(2), result.y(), 0.000000001);
     }
 
     @Test
