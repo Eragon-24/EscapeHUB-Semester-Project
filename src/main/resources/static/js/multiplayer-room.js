@@ -12,6 +12,16 @@
     }
 
     var storageKey = 'escapehub.activeSessionId';
+    var playerRadius = 18;
+    var moveStep = 12;
+    var localPlayer = { x: 480, y: 490 };
+    var otherPlayers = [];
+    var pollIntervalMs = 300;
+    var obstacles = [
+        { minX: 150, minY: 180, maxX: 420, maxY: 290 },
+        { minX: 680, minY: 195, maxX: 820, maxY: 305 },
+        { minX: 430, minY: 92, maxX: 530, maxY: 142 }
+    ];
 
     function resolveSessionId() {
         var fromAttr = canvas.getAttribute('data-session-id');
@@ -39,6 +49,8 @@
         }
     }
 
+    var sessionId = resolveSessionId();
+
     function clearStoredSession() {
         sessionId = null;
         otherPlayers = [];
@@ -49,18 +61,6 @@
         }
         render();
     }
-
-    var sessionId = resolveSessionId();
-    var playerRadius = 18;
-    var moveStep = 12;
-    var localPlayer = { x: 480, y: 490 };
-    var otherPlayers = [];
-    var pollIntervalMs = 300;
-    var obstacles = [
-        { minX: 150, minY: 180, maxX: 420, maxY: 290 },
-        { minX: 680, minY: 195, maxX: 820, maxY: 305 },
-        { minX: 430, minY: 92, maxX: 530, maxY: 142 }
-    ];
 
     function getCsrfHeaders() {
         var headers = { 'Content-Type': 'application/json' };
@@ -324,16 +324,10 @@
             }
         });
 
-        if (moved) {
-            render();
-            pushLocalPosition();
-        }
-    });
+        pushLocalPosition();
+        fetchOtherPlayers();
+        window.setInterval(fetchOtherPlayers, pollIntervalMs);
+    }
 
-    pushLocalPosition();
-    fetchOtherPlayers();
-    window.setInterval(fetchOtherPlayers, pollIntervalMs);
-}
-
-render();
+    render();
 })();
