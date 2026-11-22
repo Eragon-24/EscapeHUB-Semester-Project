@@ -2,9 +2,9 @@
 
 **Collaborative mystery missions platform with open data.**
 
-This repository contains the initial IntelliJ-ready project skeleton for the Software Engineering semester project.
+This repository contains the IntelliJ-ready project for the Software Engineering semester project.
 
-> Current status: architecture scaffold only. User accounts, teams, missions, puzzles, evidence persistence and external API integration have not been implemented yet.
+> Current status: V0.1.0 (US-001–US-006) is preserved as the first playable release. The browser room and game-session creation foundation on this branch covers US-011 and US-014 only.
 
 ## Proposed stack
 
@@ -34,6 +34,22 @@ These are the current project proposals. Confirm the final choices with the team
 7. Visit `http://localhost:8080`.
 
 The default `local` profile uses an in-memory H2 database and does not require Docker/PostgreSQL for the initial skeleton.
+
+## Browser room and game-session foundation
+
+The branch provides a browser-based room view and the first game-session creation use case:
+
+- `GET /multiplayer-room`: browser room layout for **US-014**.
+- `POST /game-sessions`: creates a session for the authenticated user and displays its six-character join code (**US-011**).
+- `GameSessionRepository.findByJoinCode(...)`: lookup contract ready for the **US-012** join-session use case.
+- `InMemoryGameSessionRepository`: temporary adapter. It can be replaced with persistent storage without changing the application service.
+- The existing `GET /room` page and its V0.1 notebook interaction remain available; it links to the new room view.
+
+The room graphic is presentation-only. This branch intentionally does **not** implement participant joining, player presence, shared game state, live movement, shared object interactions, shared evidence, or shared puzzle progress. Those concerns remain with US-012, US-013, and US-015–US-018.
+
+Session metadata is currently in memory and is cleared when the server restarts. The room layout can be opened over a trusted local network when the local profile binds to `0.0.0.0:8080`; this does not yet provide live multiplayer synchronization. Do not configure router port forwarding.
+
+Session creation requires an authenticated principal. The UI exposes the create-session action after the authentication work (US-007/US-008) is integrated.
 
 ## Run with PostgreSQL
 
@@ -70,7 +86,10 @@ docker compose down -v
 
 ## Initial endpoints
 
-- Web page: `GET /`
+- Landing page: `GET /`
+- Original V0.1 room: `GET /room`
+- Browser room view: `GET /multiplayer-room`
+- Create game session: `POST /game-sessions`
 - Basic API check: `GET /api/v1/health`
 - Spring Boot health: `GET /actuator/health`
 
@@ -82,13 +101,13 @@ src/main/java/com/escapehub/
   home/         initial landing page and health endpoint
   user/         accounts and authentication
   team/         teams and memberships
-  mission/      mission definitions and catalogue
-  gameplay/     mission runs and route exploration
+  mission/      mission catalogue and definitions
+  gameplay/     game sessions, room views and gameplay use cases
   puzzle/       puzzle rules and validation
-  evidence/     evidence journal
-  progress/     mission/route/puzzle progress
-  integration/  external APIs and snapshots
-  common/       shared exceptions and validation
+  evidence/     evidence definitions and collected evidence
+  progress/     mission, route and puzzle progress
+  integration/  external API clients and snapshots
+  common/       shared technical concerns
 ```
 
 Feature modules are organized into `web`, `application`, `domain` and `infrastructure` packages (or focused integration subpackages).
@@ -109,14 +128,14 @@ When the puzzle/gameplay rules and their test suite have been implemented, run m
 mvn -Pmutation-testing test-compile org.pitest:pitest-maven:mutationCoverage
 ```
 
-The HTML report is written under `target/pit-reports/`. The initial skeleton has no gameplay rules yet, so mutation testing is intentionally not part of the default build.
+The HTML report is written under `target/pit-reports/`. Mutation testing is intentionally not part of the default build.
 
 ## Important implementation notes
 
-- The security configuration is intentionally permissive for this empty scaffold. It is not production-ready. Implement authentication, authorization and appropriate CSRF behavior before adding real user operations.
+- The security configuration is intentionally permissive in the initial scaffold. It is not production-ready. Implement and test authentication and authorization before adding real user operations.
 - No final database migration is included because the ER model has not yet been approved. The first Flyway migration should be added after the team agrees on entities and relationships.
 - Do not put API keys, passwords or `.env` files in Git.
-- Keep mission definitions data-driven so another small mission can be added without copying the core gameplay logic.
+- Keep mission definitions data-driven so another small mission can be added without copying core domain logic.
 - Automated tests must use mocks/stubs/fixtures rather than depending on live public APIs.
 
 ## Documentation
