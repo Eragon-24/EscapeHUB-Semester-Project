@@ -60,6 +60,11 @@
                         <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
                     </ul>
                 </div>
+                <div id="game-state"
+                     th:if="${activeSessionCode != null}"
+                     th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
+                    <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
+                </div>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
@@ -92,5 +97,6 @@
     </section>
 </main>
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
+<script th:src="@{/js/game-state.js}" defer></script>
 </body>
 </html>
