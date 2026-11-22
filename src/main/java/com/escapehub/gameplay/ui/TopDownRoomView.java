@@ -5,6 +5,11 @@ import com.escapehub.gameplay.domain.ExitAccessResult;
 import com.escapehub.gameplay.domain.ExitAccessService;
 import com.escapehub.gameplay.domain.ItemType;
 import com.escapehub.gameplay.domain.RoomExit;
+import com.escapehub.gameplay.domain.movement.MovementArea;
+import com.escapehub.gameplay.domain.movement.MovementInput;
+import com.escapehub.gameplay.domain.movement.MovementObstacle;
+import com.escapehub.gameplay.domain.movement.PlayerMovementService;
+import com.escapehub.gameplay.domain.movement.PlayerPosition;
 import com.escapehub.puzzle.domain.AnswerResult;
 import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.awt.BasicStroke;
@@ -18,6 +23,7 @@ import java.awt.event.KeyEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.swing.AbstractAction;
@@ -54,6 +60,19 @@ public class TopDownRoomView {
     private static final Rectangle2D CHEST = new Rectangle2D.Double(680, 195, 140, 110);
     private static final Rectangle2D EXIT_DOOR = new Rectangle2D.Double(430, 92, 100, 50);
 
+    private static final MovementArea MOVEMENT_AREA = new MovementArea(
+            ROOM_LEFT + PLAYER_RADIUS,
+            ROOM_TOP,
+            ROOM_RIGHT - PLAYER_RADIUS,
+            ROOM_BOTTOM - PLAYER_RADIUS,
+            List.of(
+                    new MovementObstacle(DESK.getMinX(), DESK.getMinY(), DESK.getMaxX(), DESK.getMaxY()),
+                    new MovementObstacle(CHEST.getMinX(), CHEST.getMinY(), CHEST.getMaxX(), CHEST.getMaxY()),
+                    new MovementObstacle(
+                            EXIT_DOOR.getMinX(), EXIT_DOOR.getMinY(), EXIT_DOOR.getMaxX(), EXIT_DOOR.getMaxY())
+            )
+    );
+
     private static final double NOTEBOOK_X = 290;
     private static final double NOTEBOOK_Y = 230;
     private static final double CHEST_X = 750;
@@ -67,6 +86,10 @@ public class TopDownRoomView {
     private final Set<ItemType> sessionItems = new HashSet<>();
     private final JPanel gamePanel;
     private final ExitAccessService exitAccessService = new ExitAccessService();
+    private final PlayerMovementService playerMovementService = new PlayerMovementService(
+            MOVEMENT_AREA,
+            PLAYER_RADIUS
+    );
     private final RoomExit demoExit = new RoomExit(
             "LAB_EXIT",
             "STORAGE_ROOM",
@@ -75,8 +98,7 @@ public class TopDownRoomView {
 
     private JFrame frame;
     private Timer gameTimer;
-    private double playerX = 480;
-    private double playerY = 490;
+    private PlayerPosition playerPosition = new PlayerPosition(480, 490);
     private boolean interactionKeyHeld;
     private boolean clueFound;
     private boolean hasKey;
@@ -176,38 +198,13 @@ public class TopDownRoomView {
         }
 
         if (horizontal != 0 || vertical != 0) {
-            final double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
-            final double deltaX = horizontal / length * MOVE_SPEED;
-            final double deltaY = vertical / length * MOVE_SPEED;
-            movePlayer(deltaX, deltaY);
+            playerPosition = playerMovementService.move(
+                    playerPosition,
+                    new MovementInput(horizontal, vertical),
+                    MOVE_SPEED
+            );
         }
         gamePanel.repaint();
-    }
-
-    private void movePlayer(final double deltaX, final double deltaY) {
-        if (canMoveTo(playerX + deltaX, playerY)) {
-            playerX += deltaX;
-        }
-        if (canMoveTo(playerX, playerY + deltaY)) {
-            playerY += deltaY;
-        }
-    }
-
-    private boolean canMoveTo(final double x, final double y) {
-        if (x < ROOM_LEFT + PLAYER_RADIUS || x > ROOM_RIGHT - PLAYER_RADIUS
-                || y < ROOM_TOP || y > ROOM_BOTTOM - PLAYER_RADIUS) {
-            return false;
-        }
-
-        final Rectangle2D playerBounds = new Rectangle2D.Double(
-                x - PLAYER_RADIUS,
-                y - PLAYER_RADIUS,
-                PLAYER_RADIUS * 2,
-                PLAYER_RADIUS * 2
-        );
-        return !playerBounds.intersects(DESK)
-                && !playerBounds.intersects(CHEST)
-                && !playerBounds.intersects(EXIT_DOOR);
     }
 
     private void interactWithNearbyObject() {
@@ -243,7 +240,7 @@ public class TopDownRoomView {
     }
 
     private double distanceTo(final double x, final double y) {
-        return Math.hypot(playerX - x, playerY - y);
+        return Math.hypot(playerPosition.x() - x, playerPosition.y() - y);
     }
 
     private void inspectNotebook() {
@@ -465,8 +462,8 @@ public class TopDownRoomView {
         }
 
         private void drawPlayer(final Graphics2D drawing) {
-            final int x = (int) Math.round(playerX);
-            final int y = (int) Math.round(playerY);
+            final int x = (int) Math.round(playerPosition.x());
+            final int y = (int) Math.round(playerPosition.y());
             drawing.setColor(new Color(15, 18, 20, 150));
             drawing.fillOval(x - 19, y + 8, 38, 15);
             drawing.setColor(new Color(28, 71, 81));
