@@ -72,10 +72,11 @@ public class Team {
     public String getName() {
         return name;
     }
-     public void removeMember(long userId)
+     public boolean removeMember(long userId)
      {
          members.removeIf(member -> member.userId()==userId);
 
+         return false;
      }
 
     public String getJoinCode() {
