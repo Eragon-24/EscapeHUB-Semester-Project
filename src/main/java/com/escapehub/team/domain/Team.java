@@ -72,6 +72,11 @@ public class Team {
     public String getName() {
         return name;
     }
+     public void removeMember(long userId)
+     {
+         members.removeIf(member -> member.userId()==userId);
+
+     }
 
     public String getJoinCode() {
         return joinCode;
@@ -89,4 +94,5 @@ public class Team {
     public boolean isCreator(long userId) {
         return members.stream().anyMatch(m -> m.userId() == userId && m.role() == Role.CREATOR);
     }
+
 }
