@@ -1,4 +1,4 @@
-package com.escapehub.team.web;
+package com.escapehub.gameplay.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,6 +9,8 @@ import com.escapehub.team.application.LeaveTeamService;
 import com.escapehub.team.domain.Team;
 import com.escapehub.team.infrastructure.FileTeamRepository;
 import java.nio.file.Path;
+
+import com.escapehub.team.web.LeaveTeamController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,6 +30,7 @@ class LeaveTeamControllerTest {
     void setUp() {
         repository = new FileTeamRepository(tempDir.resolve("teams.txt").toString());
         controller = new LeaveTeamController(new LeaveTeamService(repository));
+
         Team team = Team.create("Escapers", 1L, JOIN_CODE);
         team.addMember(2L);
         repository.save(team);
@@ -39,18 +42,28 @@ class LeaveTeamControllerTest {
 
         String view = controller.leave(JOIN_CODE, () -> "2", redirect);
 
-        Assertions.assertEquals("redirect:" + LeaveTeamController.MULTIPLAYER_ROOM_PATH, view);
-        Assertions.assertFalse(redirect.getFlashAttributes().get("message").toString().isBlank());
-        Assertions.assertFalse(repository.findByJoinCode(JOIN_CODE).orElseThrow().isMember(2L));
+        assertEquals(
+                "redirect:" + LeaveTeamController.MULTIPLAYER_ROOM_PATH,
+                view);
+        assertFalse(
+                redirect.getFlashAttributes().get("message").toString().isBlank());
+        assertFalse(
+                repository.findByJoinCode(JOIN_CODE)
+                        .orElseThrow()
+                        .isMember(2L));
     }
 
     @Test
     void requestWithoutLoginIsRejectedAndChangesNothing() {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
-        Assertions.assertThrows(ResponseStatusException.class,
+        assertThrows(
+                ResponseStatusException.class,
                 () -> controller.leave(JOIN_CODE, null, redirect));
 
-        Assertions.assertTrue(repository.findByJoinCode(JOIN_CODE).orElseThrow().isMember(2L));
+        assertTrue(
+                repository.findByJoinCode(JOIN_CODE)
+                        .orElseThrow()
+                        .isMember(2L));
     }
 }
