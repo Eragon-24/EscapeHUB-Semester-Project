@@ -94,7 +94,8 @@ class GameStateServiceTest {
 
     @Test
     void rejectsUnknownOrBlankJoinCode() {
-        assertThrows(IllegalArgumentException.class, () -> gameService.enterGame("ZZZZZZ", "alice"));
+        assertThrows(GameSessionNotFoundException.class,
+                () -> gameService.enterGame("ZZZZZZ", "alice"));
         assertThrows(IllegalArgumentException.class, () -> gameService.enterGame(" ", "alice"));
     }
 

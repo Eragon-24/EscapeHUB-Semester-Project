@@ -6,8 +6,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.escapehub.gameplay.application.GameStateService;
 import com.escapehub.gameplay.application.JoinGameSessionService;
+import com.escapehub.gameplay.domain.Game;
+import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.GameStatus;
 import com.escapehub.gameplay.domain.SessionParticipants;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -18,13 +23,18 @@ class JoinGameSessionControllerTest {
     @Test
     void shouldJoinSessionForAuthenticatedUserAndPopulateFlashAttributes() {
         final JoinGameSessionService service = mock(JoinGameSessionService.class);
-        final JoinGameSessionController controller = new JoinGameSessionController(service);
+        final GameStateService gameStateService = mock(GameStateService.class);
+        final JoinGameSessionController controller = new JoinGameSessionController(service, gameStateService);
         final SessionParticipants participants = new SessionParticipants(
                 UUID.randomUUID(), "player1");
         participants.addPlayer("player2");
         final RedirectAttributes attributes = new RedirectAttributesModelMap();
 
+        final GameState state = new GameState(
+                participants.getSessionId(), Game.INITIAL_ROOM_ID, GameStatus.IN_PROGRESS,
+                Map.of(), 0);
         when(service.joinSession("abc234", "player2")).thenReturn(participants);
+        when(gameStateService.enterGame("abc234", "player2")).thenReturn(state);
 
         final String result = controller.joinGameSession("abc234", () -> "player2", attributes);
 
@@ -34,13 +44,16 @@ class JoinGameSessionControllerTest {
                 participants.getPlayers(),
                 attributes.getFlashAttributes().get("sessionPlayers")
         );
+        assertEquals(state, attributes.getFlashAttributes().get("gameState"));
         verify(service).joinSession("abc234", "player2");
+        verify(gameStateService).enterGame("abc234", "player2");
     }
 
     @Test
     void shouldRedirectAnonymousUserToLogin() {
         final JoinGameSessionService service = mock(JoinGameSessionService.class);
-        final JoinGameSessionController controller = new JoinGameSessionController(service);
+        final GameStateService gameStateService = mock(GameStateService.class);
+        final JoinGameSessionController controller = new JoinGameSessionController(service, gameStateService);
 
         final String result = controller.joinGameSession(
                 "ABC234",
@@ -55,7 +68,8 @@ class JoinGameSessionControllerTest {
     @Test
     void shouldReturnErrorFlashAttributeWhenJoinFails() {
         final JoinGameSessionService service = mock(JoinGameSessionService.class);
-        final JoinGameSessionController controller = new JoinGameSessionController(service);
+        final GameStateService gameStateService = mock(GameStateService.class);
+        final JoinGameSessionController controller = new JoinGameSessionController(service, gameStateService);
         final RedirectAttributes attributes = new RedirectAttributesModelMap();
 
         when(service.joinSession("ZZZZZZ", "player2"))
