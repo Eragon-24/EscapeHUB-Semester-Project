@@ -7,3 +7,7 @@ spring:
   h2:
     console:
       enabled: false
+
+# Bind the local development server to the LAN interface so other devices can connect.
+server:
+  address: 0.0.0.0

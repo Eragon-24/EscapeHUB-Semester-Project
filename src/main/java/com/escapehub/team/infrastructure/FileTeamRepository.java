@@ -1,5 +1,6 @@
 package com.escapehub.team.infrastructure;
 
+import com.escapehub.team.domain.DuplicateJoinCodeException;
 import com.escapehub.team.domain.Team;
 import com.escapehub.team.domain.TeamRepository;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +40,13 @@ public class FileTeamRepository implements TeamRepository {
     @Override
     public synchronized Team save(Team team) {
         List<Team> teams = readAll();
+        boolean duplicateJoinCode = teams.stream()
+                .filter(existing -> !Objects.equals(existing.getId(), team.getId()))
+                .anyMatch(existing -> existing.getJoinCode().equals(team.getJoinCode()));
+        if (duplicateJoinCode) {
+            throw new DuplicateJoinCodeException(team.getJoinCode());
+        }
+
         if (team.getId() == null) {
             long nextId = teams.stream().mapToLong(Team::getId).max().orElse(0L) + 1;
             team.setId(nextId);
