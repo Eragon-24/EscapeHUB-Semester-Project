@@ -96,59 +96,6 @@ body {
     font-size: 1.02rem;
 }
 
-.inspectable-objects {
-    display: grid;
-    gap: 8px;
-    margin: 14px 0;
-    padding: 0;
-    list-style: none;
-}
-
-.inspect-object-button {
-    width: 100%;
-    border: 1px solid #547783;
-    border-radius: 9px;
-    padding: 10px 12px;
-    background: #263d49;
-    color: #e8edf2;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.inspect-object-button:hover:not(:disabled) {
-    background: #345461;
-}
-
-.inspect-object-button:disabled {
-    cursor: wait;
-    opacity: 0.65;
-}
-
-.inspection-status {
-    min-height: 1.5em;
-    margin: 10px 0 0;
-    color: #b9c5d0;
-    font-size: 0.9rem;
-}
-
-.inspection-details {
-    margin-top: 12px;
-    padding: 12px;
-    border: 1px solid #517b64;
-    border-radius: 10px;
-    background: #1c332b;
-}
-
-.inspection-details h3 {
-    margin: 0 0 8px;
-    color: #f8e4a7;
-    font-size: 1rem;
-}
-
-.inspection-details p {
-    margin: 0;
-}
 
 .room-card p {
     color: #c3cdd6;
