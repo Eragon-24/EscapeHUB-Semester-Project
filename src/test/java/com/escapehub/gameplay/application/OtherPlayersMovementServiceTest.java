@@ -44,8 +44,8 @@ class OtherPlayersMovementServiceTest {
     @Test
     void shouldReturnOnlyOtherPlayersWithTheirLatestPositions() {
         service.updatePlayerPosition(session.id(), "player1", new PlayerPosition(480, 490));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(300, 250));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(320, 260));
+        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(500, 350));
+        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(520, 360));
         service.updatePlayerPosition(session.id(), "player3", new PlayerPosition(600, 400));
 
         final List<OtherPlayerView> othersForPlayer1 = service
@@ -53,7 +53,7 @@ class OtherPlayersMovementServiceTest {
 
         assertEquals(2, othersForPlayer1.size());
         assertEquals(
-                new OtherPlayerView("player2", new PlayerPosition(320, 260)),
+                new OtherPlayerView("player2", new PlayerPosition(520, 360)),
                 othersForPlayer1.get(0)
         );
         assertEquals(
@@ -63,9 +63,28 @@ class OtherPlayersMovementServiceTest {
     }
 
     @Test
+    void shouldRejectPositionsOutsideRoomBoundsOrInsideObstacles() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updatePlayerPosition(
+                        session.id(), "player1", new PlayerPosition(10, 10))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updatePlayerPosition(
+                        session.id(), "player1", new PlayerPosition(250, 230))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updatePlayerPosition(
+                        session.id(), "player1", new PlayerPosition(140, 230))
+        );
+    }
+
+    @Test
     void shouldRemovePlayerFromVisibleOthersWhenLeaving() {
         service.updatePlayerPosition(session.id(), "player1", new PlayerPosition(480, 490));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(300, 250));
+        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(500, 350));
 
         service.removePlayer(session.id(), "player2");
 
@@ -81,7 +100,7 @@ class OtherPlayersMovementServiceTest {
         assertThrows(
                 SecurityException.class,
                 () -> service.updatePlayerPosition(
-                        session.id(), "intruder", new PlayerPosition(100, 100))
+                        session.id(), "intruder", new PlayerPosition(480, 490))
         );
     }
 

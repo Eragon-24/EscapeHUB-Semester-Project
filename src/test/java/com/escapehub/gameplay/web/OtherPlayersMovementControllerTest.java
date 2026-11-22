@@ -56,17 +56,17 @@ class OtherPlayersMovementControllerTest {
         mockMvc.perform(put("/api/v1/game-sessions/{id}/player-position", session.id())
                         .principal(player2)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"x\": 320.0, \"y\": 260.0}"))
+                        .content("{\"x\": 520.0, \"y\": 360.0}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.x").value(320.0))
-                .andExpect(jsonPath("$.y").value(260.0));
+                .andExpect(jsonPath("$.x").value(520.0))
+                .andExpect(jsonPath("$.y").value(360.0));
 
         mockMvc.perform(get("/api/v1/game-sessions/{id}/other-players", session.id())
                         .principal(player1))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].username").value("player2"))
-                .andExpect(jsonPath("$[0].position.x").value(320.0))
-                .andExpect(jsonPath("$[0].position.y").value(260.0));
+                .andExpect(jsonPath("$[0].position.x").value(520.0))
+                .andExpect(jsonPath("$[0].position.y").value(360.0));
 
         mockMvc.perform(delete("/api/v1/game-sessions/{id}/player-position", session.id())
                         .principal(player2))
@@ -79,13 +79,30 @@ class OtherPlayersMovementControllerTest {
     }
 
     @Test
+    void shouldRejectOutOfBoundsOrObstacleCoordinatesWithBadRequest() throws Exception {
+        final Principal player1 = () -> "player1";
+
+        mockMvc.perform(put("/api/v1/game-sessions/{id}/player-position", session.id())
+                        .principal(player1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\": 10.0, \"y\": 10.0}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(put("/api/v1/game-sessions/{id}/player-position", session.id())
+                        .principal(player1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\": 250.0, \"y\": 230.0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldReturnUnauthorizedForUnauthenticatedRequests() throws Exception {
         mockMvc.perform(get("/api/v1/game-sessions/{id}/other-players", session.id()))
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(put("/api/v1/game-sessions/{id}/player-position", session.id())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"x\": 100, \"y\": 100}"))
+                        .content("{\"x\": 480, \"y\": 490}"))
                 .andExpect(status().isUnauthorized());
     }
 

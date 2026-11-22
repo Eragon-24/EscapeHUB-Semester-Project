@@ -11,7 +11,46 @@
         return;
     }
 
-    var sessionId = canvas.getAttribute('data-session-id');
+    var storageKey = 'escapehub.activeSessionId';
+
+    function resolveSessionId() {
+        var fromAttr = canvas.getAttribute('data-session-id');
+        var fromUrl = new URLSearchParams(window.location.search).get('sessionId');
+        var resolved = fromAttr || fromUrl;
+
+        if (resolved) {
+            try {
+                window.sessionStorage.setItem(storageKey, resolved);
+            } catch (e) {
+                // Ignore storage restrictions
+            }
+            if (!fromUrl && window.history && window.history.replaceState) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('sessionId', resolved);
+                window.history.replaceState(null, '', url.toString());
+            }
+            return resolved;
+        }
+
+        try {
+            return window.sessionStorage.getItem(storageKey);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function clearStoredSession() {
+        sessionId = null;
+        otherPlayers = [];
+        try {
+            window.sessionStorage.removeItem(storageKey);
+        } catch (e) {
+            // Ignore storage restrictions
+        }
+        render();
+    }
+
+    var sessionId = resolveSessionId();
     var playerRadius = 18;
     var moveStep = 12;
     var localPlayer = { x: 480, y: 490 };
@@ -209,9 +248,15 @@
             method: 'PUT',
             headers: getCsrfHeaders(),
             body: JSON.stringify({ x: localPlayer.x, y: localPlayer.y })
-        }).catch(function () {
-            // Ignore transient network errors during live updates
-        });
+        })
+            .then(function (response) {
+                if (response.status === 403 || response.status === 404 || response.status === 409) {
+                    clearStoredSession();
+                }
+            })
+            .catch(function () {
+                // Ignore transient network errors during live updates
+            });
     }
 
     function fetchOtherPlayers() {
@@ -223,6 +268,10 @@
             headers: { 'Accept': 'application/json' }
         })
             .then(function (response) {
+                if (response.status === 403 || response.status === 404 || response.status === 409) {
+                    clearStoredSession();
+                    return null;
+                }
                 if (!response.ok) {
                     return null;
                 }
@@ -238,7 +287,6 @@
                 // Ignore transient polling errors
             });
     }
-
     function removeLocalPositionOnLeave() {
         if (!sessionId) {
             return;

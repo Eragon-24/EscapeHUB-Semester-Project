@@ -4,6 +4,7 @@ import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.movement.OtherPlayerView;
 import com.escapehub.gameplay.domain.movement.PlayerPosition;
+import com.escapehub.gameplay.domain.movement.RoomMovementValidator;
 import com.escapehub.gameplay.domain.movement.SessionPlayerPositions;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -11,10 +12,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * US-017: Application service for recording player movements and querying
+ * US-017: Application service for recording validated player movements and querying
  * other players' current positions within an active game session.
  */
 @Service
@@ -23,27 +25,52 @@ public class OtherPlayersMovementService {
     private final SessionPlayerPositionsRepository repository;
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
+    private final RoomMovementValidator movementValidator;
 
     /**
-     * Creates the service backed by session, participant, and position repositories.
+     * Creates the service with the default laboratory movement rules.
      *
      * @param repository storage port for session player positions
      * @param gameSessionRepository repository for game sessions
      * @param participantsRepository repository for session participants
      */
+    @Autowired
     public OtherPlayersMovementService(
             final SessionPlayerPositionsRepository repository,
             final GameSessionRepository gameSessionRepository,
             final SessionParticipantsRepository participantsRepository) {
+        this(
+                repository,
+                gameSessionRepository,
+                participantsRepository,
+                RoomMovementValidator.defaultLaboratory()
+        );
+    }
+
+    /**
+     * Creates the service with a custom movement validator.
+     *
+     * @param repository storage port for session player positions
+     * @param gameSessionRepository repository for game sessions
+     * @param participantsRepository repository for session participants
+     * @param movementValidator validator enforcing room bounds and obstacles
+     */
+    public OtherPlayersMovementService(
+            final SessionPlayerPositionsRepository repository,
+            final GameSessionRepository gameSessionRepository,
+            final SessionParticipantsRepository participantsRepository,
+            final RoomMovementValidator movementValidator) {
         this.repository = Objects.requireNonNull(repository, "Repository must not be null");
         this.gameSessionRepository = Objects.requireNonNull(
                 gameSessionRepository, "Game session repository must not be null");
         this.participantsRepository = Objects.requireNonNull(
                 participantsRepository, "Participants repository must not be null");
+        this.movementValidator = Objects.requireNonNull(
+                movementValidator, "Movement validator must not be null");
     }
 
     /**
-     * Records a participant's updated position in the given active session.
+     * Records a participant's updated position after enforcing US-016 bounds and obstacles.
      *
      * @param sessionId unique session identifier
      * @param username authenticated player's username
@@ -54,6 +81,7 @@ public class OtherPlayersMovementService {
             final String username,
             final PlayerPosition position) {
         final Set<String> activePlayers = requireActiveParticipant(sessionId, username);
+        movementValidator.validate(position);
         final SessionPlayerPositions tracked = repository.findBySessionId(sessionId)
                 .orElseGet(() -> new SessionPlayerPositions(sessionId));
         tracked.retainPlayers(activePlayers);
