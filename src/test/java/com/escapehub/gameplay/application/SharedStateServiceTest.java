@@ -1,6 +1,7 @@
 package com.escapehub.gameplay.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -210,6 +211,58 @@ class SharedStateServiceTest {
         assertEquals(com.escapehub.gameplay.domain.Game.INITIAL_ROOM_ID, initial.currentRoomId());
         assertTrue(initial.attributes().isEmpty());
         assertTrue(games.findBySessionId(session.id()).isPresent());
+    }
+
+    @Test
+    void clientCannotWriteServerOwnedKeys() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "puzzle.chest", "solved"));
+
+        assertTrue(received.isEmpty());
+        assertEquals(0, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
+    void serverCanWriteServerOwnedKeysAndTheyAreBroadcast() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final SharedStateUpdate update = service.applyServerChange(session.id(), "alice", "puzzle.chest", "solved");
+
+        assertEquals(List.of(update), received);
+        assertEquals("solved", service.valueOf(session.id(), "bob", "puzzle.chest").orElseThrow());
+    }
+
+    @Test
+    void serverChangeStillRequiresAnActiveParticipantAndAValidKey() {
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyServerChange(session.id(), "mallory", "puzzle.chest", "solved"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyServerChange(session.id(), "alice", "bad key!", "solved"));
+        assertEquals(0, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
+    void ifAbsentChangeHappensOnlyOnce() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final boolean first = service.applyServerChangeIfAbsent(session.id(), "alice", "puzzle.chest", "solved")
+                .isPresent();
+        final boolean second = service.applyServerChangeIfAbsent(session.id(), "bob", "puzzle.chest", "solved")
+                .isPresent();
+
+        assertTrue(first);
+        assertFalse(second);
+        assertEquals(1, received.size());
+        assertEquals(1, service.snapshot(session.id(), "alice").version());
+        assertEquals("alice", received.get(0).author());
+    }
+
+    @Test
+    void valueOfReturnsEmptyForUnsetKeysAndRequiresParticipation() {
+        assertTrue(service.valueOf(session.id(), "alice", "puzzle.chest").isEmpty());
+        assertThrows(AccessDeniedException.class, () -> service.valueOf(session.id(), "mallory", "puzzle.chest"));
     }
 
     @Test

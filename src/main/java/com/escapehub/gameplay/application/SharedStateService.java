@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,9 +21,13 @@ import org.springframework.stereotype.Service;
  *
  * <p>The shared state itself is the {@code Game} of the session; this service does not keep a model of its own. A
  * change requested by a client is accepted only if the session exists and is active, the requesting user takes part
- * in it, the request is well-formed and no {@link StateChangeRule} objects. Only then is it applied to the
- * {@code Game} (as an attribute) and published to the participants of that session. The server stays
- * authoritative: clients never decide the official state themselves.</p>
+ * in it, the request is well-formed, the key is not server-owned and no {@link StateChangeRule} objects. Only then
+ * is it applied to the {@code Game} (as an attribute) and published to the participants of that session. The server
+ * stays authoritative: clients never decide the official state themselves.</p>
+ *
+ * <p>Keys starting with one of {@link #SERVER_OWNED_PREFIXES} (for example {@code puzzle.}) can only be set by
+ * server-side use cases through {@link #applyServerChange} or {@link #applyServerChangeIfAbsent}; a client request
+ * for them is always rejected.</p>
  */
 @Service
 public class SharedStateService {
@@ -32,6 +37,9 @@ public class SharedStateService {
 
     /** Longest allowed value. */
     public static final int MAX_VALUE_LENGTH = 1000;
+
+    /** Key prefixes that clients may never write; only server-side use cases (e.g. US-022) set them. */
+    public static final List<String> SERVER_OWNED_PREFIXES = List.of("puzzle.");
 
     private final GameSessionRepository sessions;
     private final SessionParticipantsRepository participants;
@@ -91,6 +99,23 @@ public class SharedStateService {
     }
 
     /**
+     * Checks that the user is a participant and that the session still accepts actions.
+     *
+     * @param sessionId the session
+     * @param username the user
+     * @throws NoSuchElementException when the session does not exist
+     * @throws AccessDeniedException when the user is not a participant of the session
+     * @throws IllegalStateException when the session is no longer active
+     */
+    public void requireActiveParticipant(final UUID sessionId, final String username) {
+        requireParticipant(sessionId, username);
+        final boolean active = participants.findBySessionId(sessionId).map(SessionParticipants::isActive).orElse(true);
+        if (!active) {
+            throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
+        }
+    }
+
+    /**
      * Returns the current official game state of a session. The game of the session is initialized on first access
      * (US-013), so a participant who connects before anything happened receives the initial state.
      *
@@ -104,7 +129,19 @@ public class SharedStateService {
     }
 
     /**
-     * Validates, applies and publishes a state change requested by a participant.
+     * Reads one entry of the shared state.
+     *
+     * @param sessionId the session
+     * @param username the requesting participant
+     * @param key the state entry
+     * @return its value, if set
+     */
+    public Optional<String> valueOf(final UUID sessionId, final String username, final String key) {
+        return Optional.ofNullable(snapshot(sessionId, username).attributes().get(key));
+    }
+
+    /**
+     * Validates, applies and publishes a state change requested by a client.
      *
      * @param sessionId the session
      * @param username the requesting participant
@@ -113,33 +150,84 @@ public class SharedStateService {
      * @return the accepted update
      * @throws NoSuchElementException when the session does not exist
      * @throws AccessDeniedException when the user is not a participant
-     * @throws StateChangeRejectedException when the request is invalid or a rule refuses it
+     * @throws StateChangeRejectedException when the request is invalid, targets a server-owned key or a rule
+     *         refuses it
      * @throws IllegalStateException when the session is no longer active
      */
     public SharedStateUpdate applyChange(
             final UUID sessionId, final String username, final String key, final String value) {
-        requireParticipant(sessionId, username);
-        final boolean active = participants.findBySessionId(sessionId).map(SessionParticipants::isActive).orElse(true);
-        if (!active) {
-            throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
+        requireActiveParticipant(sessionId, username);
+        validateKeyAndValue(key, value);
+        if (isServerOwned(key)) {
+            throw new StateChangeRejectedException("Αυτή η τιμή αλλάζει μόνο από τον server.");
         }
+        final String author = username.trim();
+        for (final StateChangeRule rule : rules) {
+            rule.check(sessionId, author, key, value);
+        }
+        return applyAndPublish(sessionId, author, key, value, false).orElseThrow();
+    }
+
+    /**
+     * Applies and publishes a change decided by the server itself. It is meant for server-side use cases only and
+     * is never reachable from a client request. The author must be an active participant of the session.
+     *
+     * @param sessionId the session
+     * @param author the participant whose validated action caused the change
+     * @param key the state entry
+     * @param value the new value
+     * @return the published update
+     */
+    public SharedStateUpdate applyServerChange(
+            final UUID sessionId, final String author, final String key, final String value) {
+        requireActiveParticipant(sessionId, author);
+        validateKeyAndValue(key, value);
+        return applyAndPublish(sessionId, author.trim(), key, value, false).orElseThrow();
+    }
+
+    /**
+     * Like {@link #applyServerChange}, but only if the key has no value yet. The check and the change happen as one
+     * step, so of several simultaneous calls exactly one succeeds. Used for effects that must happen only once.
+     *
+     * @param sessionId the session
+     * @param author the participant whose validated action caused the change
+     * @param key the state entry
+     * @param value the new value
+     * @return the published update, or empty if the key already had a value (nothing changed or was published)
+     */
+    public Optional<SharedStateUpdate> applyServerChangeIfAbsent(
+            final UUID sessionId, final String author, final String key, final String value) {
+        requireActiveParticipant(sessionId, author);
+        validateKeyAndValue(key, value);
+        return applyAndPublish(sessionId, author.trim(), key, value, true);
+    }
+
+    private void validateKeyAndValue(final String key, final String value) {
         if (key == null || !KEY_PATTERN.matcher(key).matches()) {
             throw new StateChangeRejectedException("Μη έγκυρο κλειδί κατάστασης.");
         }
         if (value == null || value.length() > MAX_VALUE_LENGTH) {
             throw new StateChangeRejectedException("Μη έγκυρη τιμή κατάστασης.");
         }
-        final String author = username.trim();
-        for (final StateChangeRule rule : rules) {
-            rule.check(sessionId, author, key, value);
-        }
+    }
+
+    private boolean isServerOwned(final String key) {
+        return SERVER_OWNED_PREFIXES.stream().anyMatch(key::startsWith);
+    }
+
+    private Optional<SharedStateUpdate> applyAndPublish(
+            final UUID sessionId, final String author, final String key, final String value,
+            final boolean onlyIfAbsent) {
         final Game game = gameOf(sessionId, author);
         synchronized (game) {
+            if (onlyIfAbsent && game.snapshot().attributes().containsKey(key)) {
+                return Optional.empty();
+            }
             game.putAttribute(key, value);
             final SharedStateUpdate update = new SharedStateUpdate(
                     sessionId, game.snapshot().version(), key, value, author, Instant.now(clock));
             channel.publish(update);
-            return update;
+            return Optional.of(update);
         }
     }
 
