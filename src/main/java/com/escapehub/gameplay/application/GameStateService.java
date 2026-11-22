@@ -60,7 +60,7 @@ public class GameStateService {
             throw new IllegalArgumentException("Ο κωδικός συνεδρίας δεν μπορεί να είναι κενός.");
         }
         return gameSessionRepository.findByJoinCode(joinCode.trim().toUpperCase(Locale.ROOT))
-                .orElseThrow(() -> new IllegalArgumentException("Μη έγκυρος κωδικός συνεδρίας."));
+                .orElseThrow(() -> new GameSessionNotFoundException("Μη έγκυρος κωδικός συνεδρίας."));
     }
 
     private void requireParticipant(final GameSession session, final String username) {

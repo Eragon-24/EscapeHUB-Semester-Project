@@ -61,6 +61,11 @@
                         <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
                     </ul>
                 </div>
+                <p th:if="${gameState != null}">
+                    Κοινή κατάσταση παιχνιδιού: δωμάτιο
+                    <code th:text="${gameState.currentRoomId()}">abandoned-laboratory</code>
+                    (έκδοση <span th:text="${gameState.version()}">0</span>)
+                </p>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
