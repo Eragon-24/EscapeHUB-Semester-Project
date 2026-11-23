@@ -118,6 +118,8 @@ public class SharedStateService {
         final GameSession session = sessions.findById(sessionId)
                 .orElseThrow(() -> new NoSuchElementException("Η συνεδρία δεν βρέθηκε."));
         try {
+            // The session's Game is created lazily by US-013. Ensure it exists before applying the first update.
+            gameStates.enterGame(session.joinCode(), author);
             return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, value);
         } catch (SecurityException e) {
             throw new AccessDeniedException(e.getMessage());
