@@ -3,6 +3,7 @@ package com.escapehub.gameplay.web;
 import com.escapehub.gameplay.application.GameSessionNotFoundException;
 import com.escapehub.gameplay.application.GameStateService;
 import com.escapehub.gameplay.application.JoinGameSessionService;
+import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import java.security.Principal;
 import java.util.Locale;
@@ -11,13 +12,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-
 @Controller
 public class JoinGameSessionController {
 
     private final JoinGameSessionService joinGameSessionService;
     private final GameStateService gameStateService;
-
 
     public JoinGameSessionController(
             final JoinGameSessionService joinGameSessionService,
@@ -25,7 +24,6 @@ public class JoinGameSessionController {
         this.joinGameSessionService = joinGameSessionService;
         this.gameStateService = gameStateService;
     }
-
 
     @PostMapping("/game-sessions/join")
     public String joinGameSession(
@@ -38,15 +36,19 @@ public class JoinGameSessionController {
         try {
             final SessionParticipants participants = joinGameSessionService
                     .joinSession(joinCode, principal.getName());
-            redirectAttributes.addFlashAttribute(
-                    "joinedSessionCode",
-                    joinCode.trim().toUpperCase(Locale.ROOT)
-            );
+            final String normalizedJoinCode = joinCode.trim().toUpperCase(Locale.ROOT);
+
+            redirectAttributes.addFlashAttribute("joinedSessionCode", normalizedJoinCode);
             redirectAttributes.addFlashAttribute("sessionPlayers", participants.getPlayers());
             redirectAttributes.addFlashAttribute("joinedSessionId", participants.getSessionId().toString());
-            redirectAttributes.addFlashAttribute(
-                    "gameState",
-                    gameStateService.enterGame(joinCode, principal.getName()));
+
+            final GameState gameState = gameStateService.enterGame(normalizedJoinCode, principal.getName());
+            redirectAttributes.addFlashAttribute("gameState", gameState);
+
+            // Keep the session identifiers in the URL so movement and shared-state clients can reconnect
+            // after a page refresh. Flash attributes above still provide the initial server-rendered view.
+            redirectAttributes.addAttribute("session", normalizedJoinCode);
+            redirectAttributes.addAttribute("sessionId", participants.getSessionId().toString());
         } catch (final IllegalArgumentException | IllegalStateException
                        | GameSessionNotFoundException exception) {
             redirectAttributes.addFlashAttribute("joinErrorMessage", exception.getMessage());
