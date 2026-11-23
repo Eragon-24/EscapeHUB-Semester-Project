@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class SharedStateService {
 
+    private static final String ROOM_ID = "abandoned-laboratory";
+    private static final String OBJECT_ID = "lab-notebook";
+
     /** Allowed state keys. */
     public static final Pattern KEY_PATTERN = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
 
@@ -121,6 +124,39 @@ public class SharedStateService {
             // The session's Game is created lazily by US-013. Ensure it exists before applying the first update.
             gameStates.enterGame(session.joinCode(), author);
             return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, value);
+        } catch (SecurityException e) {
+            throw new AccessDeniedException(e.getMessage());
+        }
+    }
+
+    /** Applies one supported state transition to a room object atomically for this session. */
+    public synchronized SharedStateUpdate interact(
+            final UUID sessionId, final String username, final String objectId, final String action) {
+        requireParticipant(sessionId, username);
+        final GameSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("Session not found"));
+        if (!OBJECT_ID.equals(objectId)) {
+            throw new StateChangeRejectedException("Unknown interactive object");
+        }
+        final String author = username.trim();
+        try {
+            final GameState current = gameStates.enterGame(session.joinCode(), author);
+            if (!ROOM_ID.equals(current.currentRoomId())) {
+                throw new StateChangeRejectedException("Object is not in the current room");
+            }
+            final String key = "object." + objectId + ".state";
+            final String state = current.attributes().getOrDefault(key, "closed");
+            final String next;
+            if ("open".equalsIgnoreCase(action) && "closed".equals(state)) {
+                next = "open";
+            } else if ("close".equalsIgnoreCase(action) && "open".equals(state)) {
+                next = "closed";
+            } else if ("collect".equalsIgnoreCase(action) && "open".equals(state)) {
+                next = "collected";
+            } else {
+                throw new StateChangeRejectedException("Action is invalid for the object's current state");
+            }
+            return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, next);
         } catch (SecurityException e) {
             throw new AccessDeniedException(e.getMessage());
         }

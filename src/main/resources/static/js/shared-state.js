@@ -25,6 +25,23 @@
     var version = 0;
     var listeners = [];
     var source = null;
+    var objectControls = document.querySelector('.object-interaction');
+    var objectMessage = document.getElementById('object-interaction-message');
+
+    function renderObject(stateValue) {
+        var label = document.getElementById('lab-notebook-state');
+        var buttons = objectControls ? objectControls.querySelectorAll('[data-object-action]') : [];
+        if (label) {
+            label.textContent = 'State: ' + (stateValue || 'closed');
+        }
+        Array.prototype.forEach.call(buttons, function (button) {
+            var action = button.getAttribute('data-object-action');
+            button.disabled = stateValue === 'collected'
+                || (action === 'open' && stateValue === 'open')
+                || (action === 'close' && stateValue !== 'open')
+                || (action === 'collect' && stateValue !== 'open');
+        });
+    }
 
     function metaContent(name) {
         var meta = document.querySelector('meta[name="' + name + '"]');
@@ -62,6 +79,7 @@
             return; // a newer update arrived before this snapshot
         }
         state = Object.assign({}, snapshot.attributes || {});
+        renderObject(state['object.lab-notebook.state']);
         currentRoomId = snapshot.currentRoomId || null;
         gameStatus = snapshot.status || null;
         version = snapshotVersion;
@@ -81,6 +99,9 @@
             gameStatus = update.value;
         } else {
             state[update.key] = update.value;
+            if (update.key === 'object.lab-notebook.state') {
+                renderObject(update.value);
+            }
         }
         render();
         setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
@@ -134,6 +155,30 @@
             };
         }
     };
+
+    if (objectControls) {
+        objectControls.addEventListener('click', function (event) {
+            var action = event.target.getAttribute('data-object-action');
+            if (!action) return;
+            sendObjectInteraction(objectControls.getAttribute('data-object-id'), action)
+                .catch(function (error) { if (objectMessage) objectMessage.textContent = error.message; });
+        });
+    }
+
+    function sendObjectInteraction(objectId, action) {
+        var headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+        if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+        return fetch('/game-sessions/' + encodeURIComponent(sessionId) + '/objects/'
+            + encodeURIComponent(objectId) + '/interactions', {
+            method: 'POST', headers: headers, body: 'action=' + encodeURIComponent(action)
+        }).then(function (response) {
+            return response.json().then(function (body) {
+                if (!response.ok) throw new Error(body.error || 'Interaction rejected');
+                if (objectMessage) objectMessage.textContent = 'Interaction accepted';
+                return body;
+            });
+        });
+    }
 
     connect();
 })();

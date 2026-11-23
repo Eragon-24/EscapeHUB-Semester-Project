@@ -252,6 +252,99 @@ class SharedStateServiceTest {
     }
 
     @Test
+    void objectInteractionValidatesTransitionsStoresStateAndPublishesToTheSession() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final SharedStateUpdate opened = service.interact(session.id(), "alice", "lab-notebook", "open");
+        final SharedStateUpdate closed = service.interact(session.id(), "bob", "lab-notebook", "close");
+
+        assertEquals("object.lab-notebook.state", opened.key());
+        assertEquals("open", opened.value());
+        assertEquals("closed", closed.value());
+        assertEquals(List.of(opened, closed), received);
+        assertEquals("closed",
+                service.snapshot(session.id(), "alice").attributes().get("object.lab-notebook.state"));
+    }
+
+    @Test
+    void collectedObjectCannotBeCollectedOrOpenedAgain() {
+        service.interact(session.id(), "alice", "lab-notebook", "open");
+        service.interact(session.id(), "alice", "lab-notebook", "collect");
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "bob", "lab-notebook", "collect"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "bob", "lab-notebook", "open"));
+
+        assertTrue(received.isEmpty());
+        assertEquals("collected",
+                service.snapshot(session.id(), "bob").attributes().get("object.lab-notebook.state"));
+    }
+
+    @Test
+    void invalidObjectRoomAndActionAreRejectedWithoutMutation() {
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "missing-object", "open"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "lab-notebook", "collect"));
+        gameStates.changeRoom(session.joinCode(), "alice", "vault");
+        final long versionAfterRoomChange = service.snapshot(session.id(), "alice").version();
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "lab-notebook", "open"));
+
+        assertEquals(versionAfterRoomChange, service.snapshot(session.id(), "alice").version());
+        assertTrue(service.snapshot(session.id(), "alice").attributes().isEmpty());
+    }
+
+    @Test
+    void objectUpdatesAreSessionScoped() {
+        final GameSession other = new CreateGameSessionService(sessions).createSession("dave");
+        final List<SharedStateUpdate> otherView = listenTo(other.id());
+        final List<SharedStateUpdate> sameSessionView = listenTo(session.id());
+
+        service.interact(session.id(), "alice", "lab-notebook", "open");
+
+        assertEquals(1, sameSessionView.size());
+        assertTrue(otherView.isEmpty());
+        assertTrue(service.snapshot(other.id(), "dave").attributes().isEmpty());
+    }
+
+    @Test
+    void concurrentCollectionAllowsExactlyOneSuccessfulTransition() throws Exception {
+        service.interact(session.id(), "alice", "lab-notebook", "open");
+        final ExecutorService pool = Executors.newFixedThreadPool(2);
+        final CountDownLatch start = new CountDownLatch(1);
+        final List<Future<Boolean>> attempts = new ArrayList<>();
+        for (final String player : List.of("alice", "bob")) {
+            attempts.add(pool.submit(() -> {
+                start.await();
+                try {
+                    service.interact(session.id(), player, "lab-notebook", "collect");
+                    return true;
+                } catch (StateChangeRejectedException rejected) {
+                    return false;
+                }
+            }));
+        }
+        start.countDown();
+        final long successes = attempts.stream().filter(future -> {
+            try {
+                return future.get();
+            } catch (Exception exception) {
+                throw new IllegalStateException(exception);
+            }
+        }).count();
+        pool.shutdown();
+
+        assertEquals(1, successes);
+        assertEquals("collected",
+                service.snapshot(session.id(), "alice").attributes().get("object.lab-notebook.state"));
+        assertEquals(2, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
     void concurrentChangesGetUniqueConsecutiveVersionsAndArriveInOrder() throws Exception {
         final int attempts = 30;
         final List<SharedStateUpdate> received = java.util.Collections.synchronizedList(new ArrayList<>());

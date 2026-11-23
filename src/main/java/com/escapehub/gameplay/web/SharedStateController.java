@@ -103,6 +103,16 @@ public class SharedStateController {
         return service.applyChange(sessionId, principal.getName(), key, value);
     }
 
+    /** Applies a validated interaction to a room object and broadcasts its new state. */
+    @PostMapping("/game-sessions/{sessionId}/objects/{objectId}/interactions")
+    public SharedStateUpdate interact(
+            @PathVariable final UUID sessionId,
+            @PathVariable final String objectId,
+            @RequestParam final String action,
+            final Principal principal) {
+        return service.interact(sessionId, principal.getName(), objectId, action);
+    }
+
     /**
      * Maps an unknown session to 404.
      *
