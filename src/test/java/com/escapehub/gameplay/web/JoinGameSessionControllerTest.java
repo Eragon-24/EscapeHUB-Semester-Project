@@ -24,7 +24,8 @@ class JoinGameSessionControllerTest {
     void shouldJoinSessionForAuthenticatedUserAndPopulateFlashAttributes() {
         final JoinGameSessionService service = mock(JoinGameSessionService.class);
         final GameStateService gameStateService = mock(GameStateService.class);
-        final JoinGameSessionController controller = new JoinGameSessionController(service, gameStateService);
+        final JoinGameSessionController controller = new JoinGameSessionController(
+                service, gameStateService);
         final SessionParticipants participants = new SessionParticipants(
                 UUID.randomUUID(), "player1");
         participants.addPlayer("player2");
@@ -34,7 +35,7 @@ class JoinGameSessionControllerTest {
                 participants.getSessionId(), Game.INITIAL_ROOM_ID, GameStatus.IN_PROGRESS,
                 Map.of(), 0);
         when(service.joinSession("abc234", "player2")).thenReturn(participants);
-        when(gameStateService.enterGame("abc234", "player2")).thenReturn(state);
+        when(gameStateService.enterGame("ABC234", "player2")).thenReturn(state);
 
         final String result = controller.joinGameSession("abc234", () -> "player2", attributes);
 
@@ -44,9 +45,17 @@ class JoinGameSessionControllerTest {
                 participants.getPlayers(),
                 attributes.getFlashAttributes().get("sessionPlayers")
         );
-        assertEquals(state, attributes.getFlashAttributes().get("gameState"));
+        assertEquals(
+                participants.getSessionId().toString(),
+                attributes.getFlashAttributes().get("joinedSessionId")
+        );
+        assertEquals("ABC234", attributes.asMap().get("session"));
+        assertEquals(
+                participants.getSessionId().toString(),
+                attributes.asMap().get("sessionId")
+        );
         verify(service).joinSession("abc234", "player2");
-        verify(gameStateService).enterGame("abc234", "player2");
+        verify(gameStateService).enterGame("ABC234", "player2");
     }
 
     @Test

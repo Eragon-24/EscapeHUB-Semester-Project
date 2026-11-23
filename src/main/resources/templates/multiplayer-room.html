@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${roomName} + ' - Multiplayer Room'">EscapeHub - Multiplayer Room</title>
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
+    <title th:text="${roomName} + ' - Multiplayer Room'">EscapeHub - Multiplayer Room</title>
     <link rel="stylesheet" th:href="@{/css/multiplayer-room.css}">
 </head>
 <body class="multiplayer-room-page">
@@ -23,11 +23,12 @@
             <canvas id="room-canvas"
                     width="960"
                     height="640"
-                    aria-label="Στατική απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
+                    th:data-session-id="${joinedSessionId != null ? joinedSessionId : createdSessionId}"
+                    aria-label="Απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
             </canvas>
-            <p class="board-caption">
-                Βασική οπτική απεικόνιση του δωματίου. Η κίνηση και οι αλληλεπιδράσεις
-                θα συνδεθούν από τα αντίστοιχα User Stories.
+            <p class="board-caption" id="movement-status">
+                Δημιούργησε ή μπες σε μια συνεδρία και χρησιμοποίησε WASD / βελάκια για κίνηση.
+                Οι υπόλοιποι παίκτες εμφανίζονται ζωντανά στον χώρο.
             </p>
         </div>
 
@@ -61,11 +62,11 @@
                         <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
                     </ul>
                 </div>
-                <p th:if="${gameState != null}">
-                    Κοινή κατάσταση παιχνιδιού: δωμάτιο
-                    <code th:text="${gameState.currentRoomId()}">abandoned-laboratory</code>
-                    (έκδοση <span th:text="${gameState.version()}">0</span>)
-                </p>
+                <div id="game-state"
+                     th:if="${activeSessionCode != null}"
+                     th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
+                    <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
+                </div>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
@@ -85,8 +86,8 @@
             </section>
 
             <section class="room-card" id="shared-state-card"
-                     th:if="${createdSessionId != null or joinedSessionId != null}"
-                     th:data-session-id="${createdSessionId != null ? createdSessionId : joinedSessionId}">
+                     th:if="${param.sessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${param.sessionId != null ? param.sessionId[0] : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
                 <ul id="shared-state-list"></ul>
@@ -106,6 +107,7 @@
     </section>
 </main>
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
+<script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
 </body>
 </html>

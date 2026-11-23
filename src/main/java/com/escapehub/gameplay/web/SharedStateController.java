@@ -65,16 +65,22 @@ public class SharedStateController {
                         .name("update")
                         .data(update, MediaType.APPLICATION_JSON)));
         emitter.onCompletion(unsubscribe);
-        emitter.onTimeout(emitter::complete);
+        emitter.onTimeout(() -> {
+            unsubscribe.run();
+            emitter.complete();
+        });
         emitter.onError(error -> unsubscribe.run());
-        // The snapshot is taken after subscribing, so no update can be missed. A client ignores updates whose
-        // version is not greater than the snapshot's.
-        final GameState snapshot = service.snapshot(sessionId, principal.getName());
+        // Subscribe before taking the snapshot to avoid a gap. The browser ignores an older snapshot
+        // if a newer update was delivered while the snapshot was being prepared.
         try {
+            final GameState snapshot = service.snapshot(sessionId, principal.getName());
             emitter.send(SseEmitter.event().name("snapshot").data(snapshot, MediaType.APPLICATION_JSON));
         } catch (IOException e) {
             unsubscribe.run();
             emitter.completeWithError(e);
+        } catch (RuntimeException e) {
+            unsubscribe.run();
+            throw e;
         }
         return emitter;
     }

@@ -48,11 +48,10 @@ class SharedStateServiceTest {
         sessions = new InMemoryGameSessionRepository();
         participants = new InMemorySessionParticipantsRepository();
         games = new InMemoryGameRepository();
-        gameStates = new GameStateService(sessions, participants, games);
         channel = new InMemorySessionUpdateChannel();
+        gameStates = new GameStateService(sessions, participants, games, channel, clock);
         rules = new ArrayList<>();
-        service = new SharedStateService(
-                sessions, participants, gameStates, games, channel, rules, clock);
+        service = new SharedStateService(sessions, participants, gameStates, rules);
         joinService = new JoinGameSessionService(sessions, participants);
         session = new CreateGameSessionService(sessions).createSession("alice");
         joinService.joinSession(session.joinCode(), "bob");
@@ -107,6 +106,14 @@ class SharedStateServiceTest {
     }
 
     @Test
+    void creatorMustRemainInAnExistingParticipantRecord() {
+        participants.save(new SessionParticipants(session.id(), "bob"));
+
+        assertThrows(AccessDeniedException.class, () -> service.snapshot(session.id(), "alice"));
+        assertThrows(SecurityException.class, () -> gameStates.enterGame(session.joinCode(), "alice"));
+    }
+
+    @Test
     void unknownSessionIsReported() {
         assertThrows(NoSuchElementException.class,
                 () -> service.applyChange(UUID.randomUUID(), "alice", "door", "open"));
@@ -138,8 +145,7 @@ class SharedStateServiceTest {
                 throw new StateChangeRejectedException("Η έξοδος είναι κλειδωμένη.");
             }
         });
-        service = new SharedStateService(
-                sessions, participants, gameStates, games, channel, rules, clock);
+        service = new SharedStateService(sessions, participants, gameStates, rules);
         final List<SharedStateUpdate> received = listenTo(session.id());
 
         final StateChangeRejectedException error = assertThrows(StateChangeRejectedException.class,
@@ -159,6 +165,8 @@ class SharedStateServiceTest {
         assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "bad key!", "v"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "game.currentRoomId", "vault"));
         assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "k", null));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "k", tooLong));
@@ -172,6 +180,7 @@ class SharedStateServiceTest {
         participants.save(current);
 
         assertThrows(IllegalStateException.class, () -> service.applyChange(session.id(), "alice", "door", "open"));
+        assertThrows(IllegalStateException.class, () -> service.snapshot(session.id(), "alice"));
     }
 
     @Test
@@ -213,14 +222,21 @@ class SharedStateServiceTest {
     }
 
     @Test
-    void changesMadeThroughTheGameStateServiceAreVisibleInTheSnapshot() {
+    void changesMadeThroughTheGameStateServiceAreVisibleAndPublished() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
         gameStates.enterGame(session.joinCode(), "alice");
         gameStates.updateAttribute(session.joinCode(), "alice", "lamp", "on");
+        gameStates.changeRoom(session.joinCode(), "alice", "vault");
 
         final GameState snapshot = service.snapshot(session.id(), "bob");
 
         assertEquals("on", snapshot.attributes().get("lamp"));
-        assertEquals(1, snapshot.version());
+        assertEquals("vault", snapshot.currentRoomId());
+        assertEquals(2, snapshot.version());
+        assertEquals(2, received.size());
+        assertEquals("lamp", received.get(0).key());
+        assertEquals("game.currentRoomId", received.get(1).key());
+        assertEquals(2, received.get(1).version());
     }
 
     @Test

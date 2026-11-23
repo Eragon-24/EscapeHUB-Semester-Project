@@ -2,30 +2,29 @@ package com.escapehub.gameplay.web;
 
 import com.escapehub.gameplay.domain.Room;
 import java.security.Principal;
+import java.util.Locale;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-/**
- * US-014: serves the browser-based multiplayer room layout.
- *
- * <p>The view is intentionally presentation-only. Live player movement,
- * shared state and object actions are provided by their respective stories.</p>
- */
+
 @Controller
 public class MultiplayerRoomController {
 
+    private static final String JOIN_CODE_PATTERN = "[A-Za-z0-9]{6}";
+
     private final Room room = new Room();
 
-    /**
-     * Displays the room layout and the session-creation action when authenticated.
-     *
-     * @param principal current user, if authenticated
-     * @param model values rendered by Thymeleaf
-     * @return multiplayer room template
-     */
     @GetMapping("/multiplayer-room")
-    public String showRoom(final Principal principal, final Model model) {
+    public String showRoom(
+            @RequestParam(name = "session", required = false) final String session,
+            final Principal principal,
+            final Model model) {
+        if (session != null && session.trim().matches(JOIN_CODE_PATTERN)
+                && isAuthenticated(principal)) {
+            model.addAttribute("activeSessionCode", session.trim().toUpperCase(Locale.ROOT));
+        }
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
         model.addAttribute("canCreateSession", isAuthenticated(principal));

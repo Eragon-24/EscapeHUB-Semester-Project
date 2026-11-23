@@ -22,7 +22,11 @@ public class InMemorySessionUpdateChannel implements SessionUpdateChannel {
 
     @Override
     public Runnable subscribe(final UUID sessionId, final UpdateSink sink) {
-        subscribers.computeIfAbsent(sessionId, id -> new CopyOnWriteArrayList<>()).add(sink);
+        subscribers.compute(sessionId, (id, sinks) -> {
+            final List<UpdateSink> current = sinks == null ? new CopyOnWriteArrayList<>() : sinks;
+            current.add(sink);
+            return current;
+        });
         return () -> unsubscribe(sessionId, sink);
     }
 
@@ -54,9 +58,9 @@ public class InMemorySessionUpdateChannel implements SessionUpdateChannel {
     }
 
     private void unsubscribe(final UUID sessionId, final UpdateSink sink) {
-        final List<UpdateSink> sinks = subscribers.get(sessionId);
-        if (sinks != null) {
+        subscribers.computeIfPresent(sessionId, (id, sinks) -> {
             sinks.remove(sink);
-        }
+            return sinks.isEmpty() ? null : sinks;
+        });
     }
 }

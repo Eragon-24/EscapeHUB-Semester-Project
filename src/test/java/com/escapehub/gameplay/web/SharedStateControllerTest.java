@@ -13,8 +13,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.escapehub.gameplay.application.CreateGameSessionService;
 import com.escapehub.gameplay.application.JoinGameSessionService;
+import com.escapehub.gameplay.application.SessionParticipantsRepository;
 import com.escapehub.gameplay.application.SessionUpdateChannel;
 import com.escapehub.gameplay.domain.GameSession;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,9 @@ class SharedStateControllerTest {
 
     @Autowired
     private SessionUpdateChannel channel;
+
+    @Autowired
+    private SessionParticipantsRepository participantsRepository;
 
     private MockMvc mockMvc;
     private GameSession session;
@@ -137,4 +142,14 @@ class SharedStateControllerTest {
         mockMvc.perform(get("/game-sessions/" + UUID.randomUUID() + "/events").with(user("alice")))
                 .andExpect(status().isNotFound());
     }
+    @Test
+    void inactiveSessionCannotOpenTheEventStream() throws Exception {
+        final SessionParticipants participants = participantsRepository.findBySessionId(session.id()).orElseThrow();
+        participants.deactivate();
+        participantsRepository.save(participants);
+
+        mockMvc.perform(get("/game-sessions/" + session.id() + "/events").with(user("alice")))
+                .andExpect(status().isConflict());
+    }
+
 }

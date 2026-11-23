@@ -20,6 +20,8 @@
     var csrfHeader = metaContent('_csrf_header');
 
     var state = {};
+    var currentRoomId = null;
+    var gameStatus = null;
     var version = 0;
     var listeners = [];
     var source = null;
@@ -55,8 +57,14 @@
 
     function onSnapshot(event) {
         var snapshot = JSON.parse(event.data);
-        state = snapshot.attributes || {};
-        version = snapshot.version;
+        var snapshotVersion = Number(snapshot.version) || 0;
+        if (snapshotVersion < version) {
+            return; // a newer update arrived before this snapshot
+        }
+        state = Object.assign({}, snapshot.attributes || {});
+        currentRoomId = snapshot.currentRoomId || null;
+        gameStatus = snapshot.status || null;
+        version = snapshotVersion;
         render();
         setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
     }
@@ -67,7 +75,13 @@
             return; // already included in the snapshot or already applied
         }
         version = update.version;
-        state[update.key] = update.value;
+        if (update.key === 'game.currentRoomId') {
+            currentRoomId = update.value;
+        } else if (update.key === 'game.status') {
+            gameStatus = update.value;
+        } else {
+            state[update.key] = update.value;
+        }
         render();
         setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
         notify(update);
@@ -112,7 +126,12 @@
             listeners.push(listener);
         },
         current: function () {
-            return {version: version, values: Object.assign({}, state)};
+            return {
+                version: version,
+                currentRoomId: currentRoomId,
+                status: gameStatus,
+                values: Object.assign({}, state)
+            };
         }
     };
 
