@@ -21,7 +21,7 @@ class MultiplayerRoomControllerTest {
         final MultiplayerRoomController controller = new MultiplayerRoomController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
-        final String view = controller.showRoom(() -> "playerOne", model);
+        final String view = controller.showRoom(null, () -> "playerOne", model);
 
         assertEquals("multiplayer-room", view);
         assertEquals("Εγκαταλελειμμένο Εργαστήριο", model.get("roomName"));
@@ -39,7 +39,7 @@ class MultiplayerRoomControllerTest {
         final MultiplayerRoomController controller = new MultiplayerRoomController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
-        final String view = controller.showRoom(() -> "anonymousUser", model);
+        final String view = controller.showRoom(null, () -> "anonymousUser", model);
 
         assertEquals("multiplayer-room", view);
         assertFalse((Boolean) model.get("canCreateSession"));
