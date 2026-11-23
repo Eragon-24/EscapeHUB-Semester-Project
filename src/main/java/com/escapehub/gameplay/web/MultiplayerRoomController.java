@@ -123,9 +123,4 @@ public class MultiplayerRoomController {
     /** Informational response returned by the room inspection endpoint. */
     public record InspectionResult(String name, String description) {
     }
-    /** Object name and identifier rendered in the room interface. */
-    public record InspectableObject(String id, String name) { }
-
-    /** Informational response returned by the room inspection endpoint. */
-    public record InspectionResult(String name, String description) { }
 }
