@@ -52,6 +52,13 @@ public class MultiplayerRoomController {
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
         model.addAttribute("interactiveItems", itemCatalog.itemsIn("abandoned-laboratory"));
+        model.addAttribute(
+                "inspectableObjects",
+                room.getSelectableObjects().stream()
+                        .filter(objectName -> room.inspect(objectName).isPresent())
+                        .map(objectName -> new InspectableObject(objectName, objectName))
+                        .toList()
+        );
         model.addAttribute("canCreateSession", isAuthenticated(principal));
         if (!model.containsAttribute("canLeaveSession")) {
             model.addAttribute("canLeaveSession", false);
@@ -80,5 +87,8 @@ public class MultiplayerRoomController {
 
     private boolean isAuthenticated(final Principal principal) {
         return principal != null && !"anonymousUser".equals(principal.getName());
+    }
+
+    private record InspectableObject(String id, String name) {
     }
 }
