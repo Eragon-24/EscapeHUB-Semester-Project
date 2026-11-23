@@ -3,17 +3,20 @@ package com.escapehub.gameplay.web;
 import com.escapehub.gameplay.application.GameSessionRepository;
 import com.escapehub.gameplay.application.SessionParticipantsRepository;
 import com.escapehub.gameplay.domain.GameSession;
-import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.Room;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import java.security.Principal;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-
+/** Serves the multiplayer room layout and its read-only object-inspection resource. */
 @Controller
 public class MultiplayerRoomController {
 
@@ -40,13 +43,23 @@ public class MultiplayerRoomController {
                 && isAuthenticated(principal)) {
             final String normalizedCode = session.trim().toUpperCase(Locale.ROOT);
             model.addAttribute("activeSessionCode", normalizedCode);
-            model.addAttribute("canLeaveSession", isActiveParticipant(normalizedCode, principal.getName()));
+            model.addAttribute(
+                    "canLeaveSession",
+                    isActiveParticipant(normalizedCode, principal.getName())
+            );
         }
         if (sessionId != null && !sessionId.isBlank() && isAuthenticated(principal)) {
             model.addAttribute("activeSessionId", sessionId.trim());
         }
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
+        model.addAttribute(
+                "inspectableObjects",
+                room.getSelectableObjects().stream()
+                        .filter(objectName -> room.inspect(objectName).isPresent())
+                        .map(objectName -> new InspectableObject(objectName, objectName))
+                        .toList()
+        );
         model.addAttribute("canCreateSession", isAuthenticated(principal));
         if (!model.containsAttribute("canLeaveSession")) {
             model.addAttribute("canLeaveSession", false);
@@ -73,7 +86,34 @@ public class MultiplayerRoomController {
                 .anyMatch(player -> player.equalsIgnoreCase(username));
     }
 
+    /**
+     * Returns the existing inspection information for an object in the current room.
+     *
+     * @param objectName object selected in the room
+     * @return the object's name and information, or not found when it is unavailable
+     */
+    @GetMapping("/api/room/objects/{objectName}/inspection")
+    @ResponseBody
+    public ResponseEntity<InspectionResult> inspectObject(
+            @PathVariable final String objectName) {
+        if (!room.getSelectableObjects().contains(objectName)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        final Optional<String> inspection = room.inspect(objectName);
+        return inspection
+                .map(description -> ResponseEntity.ok(
+                        new InspectionResult(objectName, description)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     private boolean isAuthenticated(final Principal principal) {
         return principal != null && !"anonymousUser".equals(principal.getName());
     }
+
+    /** Object name and identifier rendered in the room interface. */
+    public record InspectableObject(String id, String name) { }
+
+    /** Informational response returned by the room inspection endpoint. */
+    public record InspectionResult(String name, String description) { }
 }
