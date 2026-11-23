@@ -25,22 +25,26 @@
     var version = 0;
     var listeners = [];
     var source = null;
-    var objectControls = document.querySelector('.object-interaction');
     var objectMessage = document.getElementById('object-interaction-message');
 
-    function renderObject(stateValue) {
-        var label = document.getElementById('lab-notebook-state');
-        var buttons = objectControls ? objectControls.querySelectorAll('[data-object-action]') : [];
-        if (label) {
-            label.textContent = 'State: ' + (stateValue || 'closed');
-        }
-        Array.prototype.forEach.call(buttons, function (button) {
-            var action = button.getAttribute('data-object-action');
-            button.disabled = stateValue === 'collected'
-                || (action === 'open' && stateValue === 'open')
-                || (action === 'close' && stateValue !== 'open')
-                || (action === 'collect' && stateValue !== 'open');
+    function renderItems() {
+        var controls = document.querySelectorAll('.object-interaction');
+        var inventoryList = document.getElementById('shared-inventory-list');
+        Array.prototype.forEach.call(controls, function (control) {
+            var itemId = control.getAttribute('data-object-id');
+            var pickedUp = state['inventory.' + itemId] === 'true';
+            control.querySelector('[data-object-action="pickup"]').disabled = pickedUp;
         });
+        if (inventoryList) {
+            inventoryList.textContent = '';
+            Object.keys(state).filter(function (key) {
+                return key.indexOf('inventory.') === 0 && state[key] === 'true';
+            }).forEach(function (key) {
+                var item = document.createElement('li');
+                item.textContent = key.substring('inventory.'.length);
+                inventoryList.appendChild(item);
+            });
+        }
     }
 
     function metaContent(name) {
@@ -79,7 +83,7 @@
             return; // a newer update arrived before this snapshot
         }
         state = Object.assign({}, snapshot.attributes || {});
-        renderObject(state['object.lab-notebook.state']);
+        renderItems();
         currentRoomId = snapshot.currentRoomId || null;
         gameStatus = snapshot.status || null;
         version = snapshotVersion;
@@ -99,9 +103,7 @@
             gameStatus = update.value;
         } else {
             state[update.key] = update.value;
-            if (update.key === 'object.lab-notebook.state') {
-                renderObject(update.value);
-            }
+            if (update.key.indexOf('inventory.') === 0) renderItems();
         }
         render();
         setStatus('Συγχρονισμός: συνδεδεμένος (έκδοση ' + version + ')');
@@ -156,14 +158,15 @@
         }
     };
 
-    if (objectControls) {
-        objectControls.addEventListener('click', function (event) {
+    document.addEventListener('click', function (event) {
+        var control = event.target.closest('.object-interaction');
+        if (control) {
             var action = event.target.getAttribute('data-object-action');
             if (!action) return;
-            sendObjectInteraction(objectControls.getAttribute('data-object-id'), action)
+            sendObjectInteraction(control.getAttribute('data-object-id'), action)
                 .catch(function (error) { if (objectMessage) objectMessage.textContent = error.message; });
-        });
-    }
+        }
+    });
 
     function sendObjectInteraction(objectId, action) {
         var headers = {'Content-Type': 'application/x-www-form-urlencoded'};

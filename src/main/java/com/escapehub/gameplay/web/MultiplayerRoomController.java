@@ -2,6 +2,7 @@ package com.escapehub.gameplay.web;
 
 import com.escapehub.gameplay.application.GameSessionRepository;
 import com.escapehub.gameplay.application.SessionParticipantsRepository;
+import com.escapehub.gameplay.application.RoomItemCatalog;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.Room;
@@ -21,13 +22,16 @@ public class MultiplayerRoomController {
 
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
+    private final RoomItemCatalog itemCatalog;
     private final Room room = new Room();
 
     public MultiplayerRoomController(
             final GameSessionRepository gameSessionRepository,
-            final SessionParticipantsRepository participantsRepository) {
+            final SessionParticipantsRepository participantsRepository,
+            final RoomItemCatalog itemCatalog) {
         this.gameSessionRepository = gameSessionRepository;
         this.participantsRepository = participantsRepository;
+        this.itemCatalog = itemCatalog;
     }
 
     @GetMapping("/multiplayer-room")
@@ -47,6 +51,7 @@ public class MultiplayerRoomController {
         }
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
+        model.addAttribute("interactiveItems", itemCatalog.itemsIn("abandoned-laboratory"));
         model.addAttribute("canCreateSession", isAuthenticated(principal));
         if (!model.containsAttribute("canLeaveSession")) {
             model.addAttribute("canLeaveSession", false);

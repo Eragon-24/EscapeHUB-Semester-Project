@@ -112,13 +112,13 @@ class SharedStateControllerTest {
         channel.subscribe(session.id(), updates::add);
 
         mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("alice")).with(csrf())
-                        .param("action", "open"))
+                        .param("action", "pickup"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.key").value("object.lab-notebook.state"))
-                .andExpect(jsonPath("$.value").value("open"));
+                .andExpect(jsonPath("$.key").value("inventory.lab-notebook"))
+                .andExpect(jsonPath("$.value").value("true"));
 
         assertEquals(1, updates.size());
-        assertEquals("open", updates.get(0).value());
+        assertEquals("true", updates.get(0).value());
     }
 
     @Test
@@ -127,7 +127,7 @@ class SharedStateControllerTest {
         channel.subscribe(session.id(), updates::add);
 
         mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("alice")).with(csrf())
-                        .param("action", "collect"))
+                        .param("action", "pickup"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").exists());
 

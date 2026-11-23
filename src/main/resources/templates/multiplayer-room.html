@@ -103,14 +103,15 @@
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
                 <ul id="shared-state-list"></ul>
-                <div class="object-interaction" data-object-id="lab-notebook">
-                    <h3>Research notebook</h3>
-                    <p id="lab-notebook-state">State: closed</p>
-                    <button type="button" data-object-action="open">Open</button>
-                    <button type="button" data-object-action="close">Close</button>
-                    <button type="button" data-object-action="collect">Collect</button>
-                    <p id="object-interaction-message" role="status" aria-live="polite"></p>
+                <h3>Room items</h3>
+                <div class="object-interaction" th:each="itemId : ${interactiveItems}"
+                     th:attr="data-object-id=${itemId}">
+                    <span th:text="${itemId}">item</span>
+                    <button type="button" data-object-action="pickup">Pick up</button>
                 </div>
+                <p id="object-interaction-message" role="status" aria-live="polite"></p>
+                <h3>Shared inventory</h3>
+                <ul id="shared-inventory-list" aria-live="polite"></ul>
             </section>
 
             <section class="room-card">

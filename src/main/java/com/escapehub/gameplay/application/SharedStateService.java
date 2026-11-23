@@ -18,9 +18,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class SharedStateService {
 
-    private static final String ROOM_ID = "abandoned-laboratory";
-    private static final String OBJECT_ID = "lab-notebook";
-
     /** Allowed state keys. */
     public static final Pattern KEY_PATTERN = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
 
@@ -33,6 +30,7 @@ public class SharedStateService {
     private final SessionParticipantsRepository participants;
     private final GameStateService gameStates;
     private final List<StateChangeRule> rules;
+    private final RoomItemCatalog itemCatalog;
 
     /**
      * Creates the service.
@@ -46,11 +44,13 @@ public class SharedStateService {
             final GameSessionRepository sessions,
             final SessionParticipantsRepository participants,
             final GameStateService gameStates,
-            final List<StateChangeRule> rules) {
+            final List<StateChangeRule> rules,
+            final RoomItemCatalog itemCatalog) {
         this.sessions = sessions;
         this.participants = participants;
         this.gameStates = gameStates;
         this.rules = List.copyOf(rules);
+        this.itemCatalog = itemCatalog;
     }
 
     /**
@@ -129,34 +129,26 @@ public class SharedStateService {
         }
     }
 
-    /** Applies one supported state transition to a room object atomically for this session. */
+    /** Picks up a configured room item into the session-wide inventory exactly once. */
     public synchronized SharedStateUpdate interact(
             final UUID sessionId, final String username, final String objectId, final String action) {
         requireParticipant(sessionId, username);
         final GameSession session = sessions.findById(sessionId)
                 .orElseThrow(() -> new NoSuchElementException("Session not found"));
-        if (!OBJECT_ID.equals(objectId)) {
-            throw new StateChangeRejectedException("Unknown interactive object");
-        }
         final String author = username.trim();
         try {
             final GameState current = gameStates.enterGame(session.joinCode(), author);
-            if (!ROOM_ID.equals(current.currentRoomId())) {
+            if (!itemCatalog.contains(current.currentRoomId(), objectId)) {
                 throw new StateChangeRejectedException("Object is not in the current room");
             }
-            final String key = "object." + objectId + ".state";
-            final String state = current.attributes().getOrDefault(key, "closed");
-            final String next;
-            if ("open".equalsIgnoreCase(action) && "closed".equals(state)) {
-                next = "open";
-            } else if ("close".equalsIgnoreCase(action) && "open".equals(state)) {
-                next = "closed";
-            } else if ("collect".equalsIgnoreCase(action) && "open".equals(state)) {
-                next = "collected";
-            } else {
-                throw new StateChangeRejectedException("Action is invalid for the object's current state");
+            if (!"pickup".equalsIgnoreCase(action) && !"collect".equalsIgnoreCase(action)) {
+                throw new StateChangeRejectedException("Unsupported item action");
             }
-            return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, next);
+            final String inventoryKey = "inventory." + objectId;
+            if (current.attributes().containsKey(inventoryKey)) {
+                throw new StateChangeRejectedException("Item has already been picked up");
+            }
+            return gameStates.updateAttributeAndPublish(session.joinCode(), author, inventoryKey, "true");
         } catch (SecurityException e) {
             throw new AccessDeniedException(e.getMessage());
         }
