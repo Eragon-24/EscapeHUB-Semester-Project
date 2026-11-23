@@ -89,6 +89,11 @@ public class MultiplayerRoomController {
         return principal != null && !"anonymousUser".equals(principal.getName());
     }
 
-    private record InspectableObject(String id, String name) {
+    /** Object identity and display name supplied to the room view. */
+    public record InspectableObject(String id, String name) {
+    }
+
+    /** Informational response returned by the room inspection endpoint. */
+    public record InspectionResult(String name, String description) {
     }
 }
