@@ -87,7 +87,7 @@
                            required>
                     <button type="submit">Συμμετοχή σε συνεδρία</button>
                 </form>
-                <form th:if="${canCreateSession and activeSessionCode != null}"
+                <form th:if="${canLeaveSession}"
                       th:action="@{/game-sessions/{code}/leave(code=${activeSessionCode})}"
                       method="post">
                     <button type="submit">Αποχώρηση από τη συνεδρία</button>
