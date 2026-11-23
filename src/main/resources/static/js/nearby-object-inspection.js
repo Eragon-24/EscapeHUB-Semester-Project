@@ -9,6 +9,7 @@
             if (!this.card) {
                 return;
             }
+            this.canvas = document.getElementById('room-canvas');
 
             this.card.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-inspect-object-id]');
@@ -16,6 +17,26 @@
                     this.requestInspection(button.dataset.inspectObjectId);
                 }
             });
+
+            if (this.canvas) {
+                this.canvas.addEventListener('click', (event) => {
+                    const bounds = this.canvas.getBoundingClientRect();
+                    if (!bounds.width || !bounds.height) {
+                        return;
+                    }
+
+                    const x = (event.clientX - bounds.left) * this.canvas.width / bounds.width;
+                    const y = (event.clientY - bounds.top) * this.canvas.height / bounds.height;
+                    if (x < 250 || x > 335 || y < 190 || y > 275) {
+                        return;
+                    }
+
+                    const button = this.card.querySelector('[data-inspect-object-id]');
+                    if (button) {
+                        this.requestInspection(button.dataset.inspectObjectId);
+                    }
+                });
+            }
         }
 
         requestInspection(objectId) {

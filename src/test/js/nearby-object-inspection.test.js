@@ -23,10 +23,22 @@ function createHarness(fetchImplementation) {
         }
     };
     const button = {
-        dataset: { inspectObjectId: 'notebook' },
+        dataset: { inspectObjectId: 'Παλιό Σημειωματάριο' },
         disabled: false
     };
     let clickHandler;
+    let canvasClickHandler;
+    const canvas = {
+        width: 960,
+        height: 640,
+        addEventListener(eventName, handler) {
+            assert.equal(eventName, 'click');
+            canvasClickHandler = handler;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 960, height: 640 };
+        }
+    };
     const card = {
         addEventListener(eventName, handler) {
             assert.equal(eventName, 'click');
@@ -41,6 +53,9 @@ function createHarness(fetchImplementation) {
             }
             if (selector === '.nearby-object-inspection__details') {
                 return details;
+            }
+            if (selector === '[data-inspect-object-id]') {
+                return button;
             }
             throw new Error('Unexpected selector: ' + selector);
         },
@@ -57,6 +72,9 @@ function createHarness(fetchImplementation) {
     const document = {
         querySelector() {
             return sidebar;
+        },
+        getElementById(id) {
+            return id === 'room-canvas' ? canvas : null;
         }
     };
 
@@ -76,6 +94,9 @@ function createHarness(fetchImplementation) {
                     }
                 }
             });
+        },
+        clickCanvas(x, y) {
+            canvasClickHandler({ clientX: x, clientY: y });
         },
         description: displayedDescription,
         details: details,
@@ -100,10 +121,47 @@ test('selecting an object fetches and displays its server inspection result', as
     harness.click();
     await new Promise((resolve) => setImmediate(resolve));
 
-    assert.equal(requestedUrl, '/api/room/objects/notebook/inspection');
+    assert.equal(
+        requestedUrl,
+        '/api/room/objects/' + encodeURIComponent('Παλιό Σημειωματάριο') + '/inspection'
+    );
     assert.equal(harness.name.textContent, 'Notebook');
     assert.equal(harness.description.textContent, 'A weathered notebook.');
     assert.equal(harness.details.hidden, false);
+    assert.equal(harness.button.disabled, false);
+});
+
+test('clicking the notebook in the room canvas requests its inspection', async () => {
+    let requestedUrl;
+    const harness = createHarness(async (url) => {
+        requestedUrl = url;
+        return {
+            ok: true,
+            json: async () => ({
+                name: 'Παλιό Σημειωματάριο',
+                description: 'Η ένδειξη του σημειωματαρίου.'
+            })
+        };
+    });
+
+    harness.clickCanvas(293, 223);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(
+        requestedUrl,
+        '/api/room/objects/' + encodeURIComponent('Παλιό Σημειωματάριο') + '/inspection'
+    );
+    assert.equal(harness.details.hidden, false);
+});
+
+test('clicking elsewhere on the room canvas does not inspect an object', () => {
+    const harness = createHarness(async () => {
+        throw new Error('Unexpected inspection request');
+    });
+
+    harness.clickCanvas(500, 400);
+
+    assert.equal(harness.details.hidden, true);
     assert.equal(harness.button.disabled, false);
 });
 

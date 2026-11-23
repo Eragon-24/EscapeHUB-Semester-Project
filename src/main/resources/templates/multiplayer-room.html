@@ -25,11 +25,13 @@
                     width="960"
                     height="640"
                     th:data-session-id="${joinedSessionId != null ? joinedSessionId : createdSessionId}"
-                    aria-label="Απεικόνιση του εγκαταλελειμμένου εργαστηρίου">
+                    aria-label="Απεικόνιση του εγκαταλελειμμένου εργαστηρίου"
+                    aria-describedby="movement-status">
             </canvas>
             <p class="board-caption" id="movement-status">
                 Δημιούργησε ή μπες σε μια συνεδρία και χρησιμοποίησε WASD / βελάκια για κίνηση.
-                Οι υπόλοιποι παίκτες εμφανίζονται ζωντανά στον χώρο.
+                Κάνε κλικ στο σημειωματάριο για να το εξετάσεις. Οι υπόλοιποι παίκτες
+                εμφανίζονται ζωντανά στον χώρο.
             </p>
         </div>
 
@@ -94,6 +96,33 @@
                 <ul id="shared-state-list"></ul>
             </section>
 
+            <section class="room-card nearby-object-inspection"
+                     aria-labelledby="nearby-object-inspection-heading">
+                <h2 id="nearby-object-inspection-heading">Αντικείμενα προς εξέταση</h2>
+                <p class="muted-message">Επίλεξε ένα αντικείμενο ή κάνε κλικ πάνω του στον χώρο.</p>
+                <ul class="nearby-object-inspection__objects">
+                    <li th:each="object : ${inspectableObjects}">
+                        <button type="button"
+                                class="nearby-object-inspection__button"
+                                th:attr="data-inspect-object-id=${object.id}"
+                                th:text="${object.name}">
+                            Εξέταση αντικειμένου
+                        </button>
+                    </li>
+                </ul>
+                <p class="nearby-object-inspection__status"
+                   role="status"
+                   aria-live="polite">
+                    Διάλεξε ένα αντικείμενο για εξέταση.
+                </p>
+                <article class="nearby-object-inspection__details"
+                         aria-live="polite"
+                         hidden>
+                    <h3></h3>
+                    <p></p>
+                </article>
+            </section>
+
             <section class="room-card">
                 <h2>Επεκτάσεις multiplayer</h2>
                 <p class="muted-message">
@@ -110,5 +139,6 @@
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
+<script th:src="@{/js/nearby-object-inspection.js}" defer></script>
 </body>
 </html>
