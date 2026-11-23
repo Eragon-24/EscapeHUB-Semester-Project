@@ -14,7 +14,7 @@ class MultiplayerRoomControllerTest {
         final MultiplayerRoomController controller = new MultiplayerRoomController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
-        final String view = controller.showRoom(null, () -> "playerOne", model);
+        final String view = controller.showRoom(null, null, () -> "playerOne", model);
 
         assertEquals("multiplayer-room", view);
         assertEquals("Εγκαταλελειμμένο Εργαστήριο", model.get("roomName"));
@@ -27,7 +27,7 @@ class MultiplayerRoomControllerTest {
         final MultiplayerRoomController controller = new MultiplayerRoomController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
-        final String view = controller.showRoom(null, () -> "anonymousUser", model);
+        final String view = controller.showRoom(null, null, () -> "anonymousUser", model);
 
         assertEquals("multiplayer-room", view);
         assertFalse((Boolean) model.get("canCreateSession"));
@@ -38,9 +38,19 @@ class MultiplayerRoomControllerTest {
         final MultiplayerRoomController controller = new MultiplayerRoomController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
-        controller.showRoom("abc234", () -> "playerOne", model);
+        controller.showRoom("abc234", null, () -> "playerOne", model);
 
         assertEquals("ABC234", model.get("activeSessionCode"));
+    }
+
+    @Test
+    void shouldExposeActiveSessionIdWithoutReadingRequestParametersInTemplate() {
+        final MultiplayerRoomController controller = new MultiplayerRoomController();
+        final ExtendedModelMap model = new ExtendedModelMap();
+
+        controller.showRoom("ABC234", "session-123", () -> "playerOne", model);
+
+        assertEquals("session-123", model.get("activeSessionId"));
     }
 
     @Test
@@ -49,8 +59,8 @@ class MultiplayerRoomControllerTest {
         final ExtendedModelMap malformed = new ExtendedModelMap();
         final ExtendedModelMap anonymous = new ExtendedModelMap();
 
-        controller.showRoom("<script>", () -> "playerOne", malformed);
-        controller.showRoom("ABC234", () -> "anonymousUser", anonymous);
+        controller.showRoom("<script>", null, () -> "playerOne", malformed);
+        controller.showRoom("ABC234", null, () -> "anonymousUser", anonymous);
 
         assertFalse(malformed.containsAttribute("activeSessionCode"));
         assertFalse(anonymous.containsAttribute("activeSessionCode"));

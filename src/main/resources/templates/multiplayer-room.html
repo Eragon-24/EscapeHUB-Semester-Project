@@ -98,8 +98,8 @@
             </section>
 
             <section class="room-card" id="shared-state-card"
-                     th:if="${param.sessionId != null or createdSessionId != null or joinedSessionId != null}"
-                     th:data-session-id="${param.sessionId != null ? param.sessionId[0] : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                     th:if="${activeSessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
                 <ul id="shared-state-list"></ul>

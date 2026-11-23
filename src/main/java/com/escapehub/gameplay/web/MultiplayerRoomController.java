@@ -19,11 +19,15 @@ public class MultiplayerRoomController {
     @GetMapping("/multiplayer-room")
     public String showRoom(
             @RequestParam(name = "session", required = false) final String session,
+            @RequestParam(name = "sessionId", required = false) final String sessionId,
             final Principal principal,
             final Model model) {
         if (session != null && session.trim().matches(JOIN_CODE_PATTERN)
                 && isAuthenticated(principal)) {
             model.addAttribute("activeSessionCode", session.trim().toUpperCase(Locale.ROOT));
+        }
+        if (sessionId != null && !sessionId.isBlank() && isAuthenticated(principal)) {
+            model.addAttribute("activeSessionId", sessionId.trim());
         }
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
