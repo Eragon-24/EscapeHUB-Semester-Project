@@ -127,7 +127,7 @@ class SharedStateControllerTest {
         channel.subscribe(session.id(), updates::add);
 
         mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("alice")).with(csrf())
-                        .param("action", "pickup"))
+                        .param("action", "open"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").exists());
 

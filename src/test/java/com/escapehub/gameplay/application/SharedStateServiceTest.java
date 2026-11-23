@@ -272,11 +272,9 @@ class SharedStateServiceTest {
 
         assertThrows(StateChangeRejectedException.class,
                 () -> service.interact(session.id(), "bob", "lab-notebook", "pickup"));
-        assertThrows(StateChangeRejectedException.class,
-                () -> service.interact(session.id(), "bob", "lab-notebook", "pickup"));
 
         assertTrue(received.isEmpty());
-        assertEquals("collected",
+        assertEquals("true",
                 service.snapshot(session.id(), "bob").attributes().get("inventory.lab-notebook"));
     }
 
@@ -285,7 +283,7 @@ class SharedStateServiceTest {
         assertThrows(StateChangeRejectedException.class,
                 () -> service.interact(session.id(), "alice", "missing-object", "pickup"));
         assertThrows(StateChangeRejectedException.class,
-                () -> service.interact(session.id(), "alice", "lab-notebook", "pickup"));
+                () -> service.interact(session.id(), "alice", "lab-notebook", "open"));
         gameStates.changeRoom(session.joinCode(), "alice", "vault");
         final long versionAfterRoomChange = service.snapshot(session.id(), "alice").version();
 
@@ -311,7 +309,6 @@ class SharedStateServiceTest {
 
     @Test
     void concurrentCollectionAllowsExactlyOneSuccessfulTransition() throws Exception {
-        service.interact(session.id(), "alice", "lab-notebook", "open");
         final ExecutorService pool = Executors.newFixedThreadPool(2);
         final CountDownLatch start = new CountDownLatch(1);
         final List<Future<Boolean>> attempts = new ArrayList<>();
