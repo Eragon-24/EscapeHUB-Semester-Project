@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escapehub.gameplay.domain.GameSession;
-import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
@@ -100,9 +100,12 @@ class SharedStateServiceTest {
     void nonParticipantCannotChangeOrReadAndNothingIsPublished() {
         final List<SharedStateUpdate> received = listenTo(session.id());
 
-        assertThrows(AccessDeniedException.class, () -> service.applyChange(session.id(), "mallory", "door", "open"));
-        assertThrows(AccessDeniedException.class, () -> service.snapshot(session.id(), "mallory"));
-        assertThrows(AccessDeniedException.class, () -> service.requireParticipant(session.id(), " "));
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyChange(session.id(), "mallory", "door", "open"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.snapshot(session.id(), "mallory"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.requireParticipant(session.id(), " "));
         assertTrue(received.isEmpty());
         assertEquals(0, service.snapshot(session.id(), "alice").version());
     }
@@ -111,8 +114,10 @@ class SharedStateServiceTest {
     void creatorMustRemainInAnExistingParticipantRecord() {
         participants.save(new SessionParticipants(session.id(), "bob"));
 
-        assertThrows(AccessDeniedException.class, () -> service.snapshot(session.id(), "alice"));
-        assertThrows(SecurityException.class, () -> gameStates.enterGame(session.joinCode(), "alice"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.snapshot(session.id(), "alice"));
+        assertThrows(SecurityException.class,
+                () -> gameStates.enterGame(session.joinCode(), "alice"));
     }
 
     @Test
@@ -136,7 +141,8 @@ class SharedStateServiceTest {
     void participantOfOneSessionCannotChangeAnotherSession() {
         final GameSession other = new CreateGameSessionService(sessions).createSession("dave");
 
-        assertThrows(AccessDeniedException.class, () -> service.applyChange(other.id(), "alice", "door", "open"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyChange(other.id(), "alice", "door", "open"));
         assertTrue(service.snapshot(other.id(), "dave").attributes().isEmpty());
     }
 
@@ -163,13 +169,16 @@ class SharedStateServiceTest {
     void malformedRequestsAreRejected() {
         final String tooLong = "x".repeat(SharedStateService.MAX_VALUE_LENGTH + 1);
 
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", null, "v"));
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "", "v"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", null, "v"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "bad key!", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "game.currentRoomId", "vault"));
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "k", null));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "k", null));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "k", tooLong));
         assertEquals(0, service.snapshot(session.id(), "alice").version());
@@ -181,8 +190,10 @@ class SharedStateServiceTest {
         current.deactivate();
         participants.save(current);
 
-        assertThrows(IllegalStateException.class, () -> service.applyChange(session.id(), "alice", "door", "open"));
-        assertThrows(IllegalStateException.class, () -> service.snapshot(session.id(), "alice"));
+        assertThrows(IllegalStateException.class,
+                () -> service.applyChange(session.id(), "alice", "door", "open"));
+        assertThrows(IllegalStateException.class,
+                () -> service.snapshot(session.id(), "alice"));
     }
 
     @Test
