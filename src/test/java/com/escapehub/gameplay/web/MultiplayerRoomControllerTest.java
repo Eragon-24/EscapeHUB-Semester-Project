@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.escapehub.gameplay.application.RoomItemCatalog;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,8 @@ class MultiplayerRoomControllerTest {
     void setUp() {
         gameSessionRepository = new InMemoryGameSessionRepository();
         participantsRepository = new InMemorySessionParticipantsRepository();
-        controller = new MultiplayerRoomController(gameSessionRepository, participantsRepository);
+        final RoomItemCatalog itemCatalog = new RoomItemCatalog(List.of("lab-notebook"));
+        controller = new MultiplayerRoomController(gameSessionRepository, participantsRepository, itemCatalog);
     }
 
     @Test
