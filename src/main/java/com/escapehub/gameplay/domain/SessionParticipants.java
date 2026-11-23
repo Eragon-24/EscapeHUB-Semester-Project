@@ -65,8 +65,17 @@ public class SessionParticipants {
             return;
         }
         if (players.size() >= MAX_PLAYERS) {
-            throw new IllegalStateException("Η συνεδρία είναι πλήρης (μέγιστο 6 παίκτες).");
+            throw new IllegalStateException(
+                    "Η συνεδρία είναι πλήρης (μέγιστο 6 παίκτες).");
         }
         players.add(cleanUsername);
+    }
+
+    /** Removes a player from the session. */
+    public boolean removePlayer(final String username) {
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+        return players.remove(username.trim());
     }
 }

@@ -60,11 +60,19 @@
                         <li th:each="player : ${sessionPlayers}" th:text="${player}">player</li>
                     </ul>
                 </div>
+                <p class="muted-message" th:if="${leaveMessage != null}" th:text="${leaveMessage}">
+                    Αποχώρησες από τη συνεδρία.
+                </p>
                 <div id="game-state"
                      th:if="${activeSessionCode != null}"
                      th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
                     <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
                 </div>
+                <form th:if="${activeSessionCode != null and canLeaveSession}"
+                      th:action="@{/game-sessions/{code}/leave(code=${activeSessionCode})}"
+                      method="post">
+                    <button type="submit">Αποχώρηση από τη συνεδρία</button>
+                </form>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>

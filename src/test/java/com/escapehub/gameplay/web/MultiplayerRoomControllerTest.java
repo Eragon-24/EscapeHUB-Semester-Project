@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
+import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 
@@ -11,7 +13,7 @@ class MultiplayerRoomControllerTest {
 
     @Test
     void shouldDisplayRoomAndAllowAuthenticatedCreatorToStartSession() {
-        final MultiplayerRoomController controller = new MultiplayerRoomController();
+        final MultiplayerRoomController controller = createController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
         final String view = controller.showRoom(null, () -> "playerOne", model);
@@ -24,7 +26,7 @@ class MultiplayerRoomControllerTest {
 
     @Test
     void shouldDisplayRoomWithoutSessionCreationForAnonymousVisitor() {
-        final MultiplayerRoomController controller = new MultiplayerRoomController();
+        final MultiplayerRoomController controller = createController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
         final String view = controller.showRoom(null, () -> "anonymousUser", model);
@@ -35,7 +37,7 @@ class MultiplayerRoomControllerTest {
 
     @Test
     void shouldExposeActiveSessionCodeSoStateReloadsAfterRefresh() {
-        final MultiplayerRoomController controller = new MultiplayerRoomController();
+        final MultiplayerRoomController controller = createController();
         final ExtendedModelMap model = new ExtendedModelMap();
 
         controller.showRoom("abc234", () -> "playerOne", model);
@@ -45,7 +47,7 @@ class MultiplayerRoomControllerTest {
 
     @Test
     void shouldIgnoreMalformedSessionCodeAndAnonymousVisitors() {
-        final MultiplayerRoomController controller = new MultiplayerRoomController();
+        final MultiplayerRoomController controller = createController();
         final ExtendedModelMap malformed = new ExtendedModelMap();
         final ExtendedModelMap anonymous = new ExtendedModelMap();
 
@@ -54,5 +56,11 @@ class MultiplayerRoomControllerTest {
 
         assertFalse(malformed.containsAttribute("activeSessionCode"));
         assertFalse(anonymous.containsAttribute("activeSessionCode"));
+    }
+
+    private MultiplayerRoomController createController() {
+        return new MultiplayerRoomController(
+                new InMemoryGameSessionRepository(),
+                new InMemorySessionParticipantsRepository());
     }
 }

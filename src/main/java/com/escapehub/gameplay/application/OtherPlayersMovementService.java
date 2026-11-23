@@ -96,9 +96,21 @@ public class OtherPlayersMovementService {
      * @param username authenticated participant's username
      */
     public synchronized void removePlayer(final UUID sessionId, final String username) {
-        requireActiveParticipant(sessionId, username);
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Απαιτείται σύνδεση χρήστη.");
+        }
+        final GameSession session = requireExistingSession(sessionId);
+        final String cleanUsername = username.trim();
+        final Optional<SessionParticipants> participants =
+                participantsRepository.findBySessionId(sessionId);
+        final boolean isParticipant = participants
+                .map(value -> value.getPlayers().contains(cleanUsername))
+                .orElseGet(() -> session.creatorUsername().equals(cleanUsername));
+        if (!isParticipant) {
+            throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
+        }
         repository.findBySessionId(sessionId).ifPresent(tracked -> {
-            tracked.removePlayer(username);
+            tracked.removePlayer(cleanUsername);
             repository.save(tracked);
         });
     }
