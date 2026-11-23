@@ -2,7 +2,6 @@ package com.escapehub.gameplay.application;
 
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.SessionParticipants;
-import com.escapehub.gameplay.domain.movement.SessionPlayerPositions;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
