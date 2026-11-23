@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
     <title th:text="${roomName} + ' - Multiplayer Room'">EscapeHub - Multiplayer Room</title>
     <link rel="stylesheet" th:href="@{/css/multiplayer-room.css}">
 </head>
@@ -83,6 +85,14 @@
                 </p>
             </section>
 
+            <section class="room-card" id="shared-state-card"
+                     th:if="${param.sessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${param.sessionId != null ? param.sessionId[0] : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                <h2>Κοινή κατάσταση (US-015)</h2>
+                <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
+                <ul id="shared-state-list"></ul>
+            </section>
+
             <section class="room-card">
                 <h2>Επεκτάσεις multiplayer</h2>
                 <p class="muted-message">
@@ -98,5 +108,6 @@
 </main>
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
+<script th:src="@{/js/shared-state.js}" defer></script>
 </body>
 </html>

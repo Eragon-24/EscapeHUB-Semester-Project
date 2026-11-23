@@ -9,7 +9,12 @@ import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.GameStatus;
+import com.escapehub.gameplay.domain.SharedStateUpdate;
 import com.escapehub.gameplay.infrastructure.InMemoryGameRepository;
+import com.escapehub.gameplay.infrastructure.InMemorySessionUpdateChannel;
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.List;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +25,7 @@ class GameStateServiceTest {
     private CreateGameSessionService createService;
     private JoinGameSessionService joinService;
     private GameStateService gameService;
+    private InMemorySessionUpdateChannel updateChannel;
 
     @BeforeEach
     void setUp() {
@@ -28,7 +34,9 @@ class GameStateServiceTest {
                 new InMemorySessionParticipantsRepository();
         createService = new CreateGameSessionService(sessions);
         joinService = new JoinGameSessionService(sessions, participants);
-        gameService = new GameStateService(sessions, participants, new InMemoryGameRepository());
+        updateChannel = new InMemorySessionUpdateChannel();
+        gameService = new GameStateService(
+                sessions, participants, new InMemoryGameRepository(), updateChannel, Clock.systemUTC());
     }
 
     @Test
@@ -108,4 +116,23 @@ class GameStateServiceTest {
 
         assertTrue(before.attributes().isEmpty());
     }
+    @Test
+    void directGameMutationsPublishVersionedUpdatesToTheSameSession() {
+        final GameSession session = createService.createSession("alice");
+        gameService.enterGame(session.joinCode(), "alice");
+        final List<SharedStateUpdate> received = new ArrayList<>();
+        updateChannel.subscribe(session.id(), received::add);
+
+        gameService.changeRoom(session.joinCode(), "alice", "vault");
+        gameService.updateAttribute(session.joinCode(), "alice", "doorOpen", "true");
+
+        assertEquals(2, received.size());
+        assertEquals("game.currentRoomId", received.get(0).key());
+        assertEquals("vault", received.get(0).value());
+        assertEquals(1, received.get(0).version());
+        assertEquals("doorOpen", received.get(1).key());
+        assertEquals("true", received.get(1).value());
+        assertEquals(2, received.get(1).version());
+    }
+
 }

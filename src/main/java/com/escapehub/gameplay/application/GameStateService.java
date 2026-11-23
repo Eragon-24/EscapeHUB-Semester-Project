@@ -4,6 +4,9 @@ import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.SessionParticipants;
+import com.escapehub.gameplay.domain.SharedStateUpdate;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -11,17 +14,27 @@ import org.springframework.stereotype.Service;
 @Service
 public class GameStateService {
 
+    private static final String CURRENT_ROOM_KEY = "game.currentRoomId";
+
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
     private final GameRepository gameRepository;
+    private final SessionUpdateChannel updateChannel;
+    private final Clock clock;
+
     public GameStateService(
             final GameSessionRepository gameSessionRepository,
             final SessionParticipantsRepository participantsRepository,
-            final GameRepository gameRepository) {
+            final GameRepository gameRepository,
+            final SessionUpdateChannel updateChannel,
+            final Clock clock) {
         this.gameSessionRepository = gameSessionRepository;
         this.participantsRepository = participantsRepository;
         this.gameRepository = gameRepository;
+        this.updateChannel = updateChannel;
+        this.clock = clock;
     }
+
     public synchronized GameState enterGame(final String joinCode, final String username) {
         final GameSession session = findSession(joinCode);
         requireParticipant(session, username);
@@ -29,22 +42,65 @@ public class GameStateService {
                 .orElseGet(() -> gameRepository.save(new Game(session.id())));
         return game.snapshot();
     }
+
     public synchronized Optional<GameState> getState(final String joinCode, final String username) {
         final GameSession session = findSession(joinCode);
         requireParticipant(session, username);
         return gameRepository.findBySessionId(session.id()).map(Game::snapshot);
     }
+
     public synchronized GameState changeRoom(
             final String joinCode, final String username, final String roomId) {
         final Game game = requireGame(joinCode, username);
-        game.changeRoom(roomId);
-        return game.snapshot();
+        synchronized (game) {
+            game.changeRoom(roomId);
+            final GameState snapshot = game.snapshot();
+            publishUpdate(snapshot, username, CURRENT_ROOM_KEY, snapshot.currentRoomId());
+            return snapshot;
+        }
     }
+
     public synchronized GameState updateAttribute(
             final String joinCode, final String username, final String key, final String value) {
+        return mutateAttribute(joinCode, username, key, value).state();
+    }
+
+    /**
+     * Applies an attribute change and returns the exact event published to the session subscribers.
+     *
+     * @param joinCode session join code
+     * @param username authenticated participant
+     * @param key attribute name
+     * @param value new attribute value
+     * @return the published event
+     */
+    public synchronized SharedStateUpdate updateAttributeAndPublish(
+            final String joinCode, final String username, final String key, final String value) {
+        return mutateAttribute(joinCode, username, key, value).update();
+    }
+
+    private MutationResult mutateAttribute(
+            final String joinCode, final String username, final String key, final String value) {
         final Game game = requireGame(joinCode, username);
-        game.putAttribute(key, value);
-        return game.snapshot();
+        synchronized (game) {
+            game.putAttribute(key, value);
+            final GameState snapshot = game.snapshot();
+            final SharedStateUpdate update = publishUpdate(snapshot, username, key.trim(), value);
+            return new MutationResult(snapshot, update);
+        }
+    }
+
+    private SharedStateUpdate publishUpdate(
+            final GameState snapshot, final String username, final String key, final String value) {
+        final SharedStateUpdate update = new SharedStateUpdate(
+                snapshot.sessionId(),
+                snapshot.version(),
+                key,
+                value,
+                username.trim(),
+                Instant.now(clock));
+        updateChannel.publish(update);
+        return update;
     }
 
     private Game requireGame(final String joinCode, final String username) {
@@ -71,13 +127,16 @@ public class GameStateService {
         final Optional<SessionParticipants> participants =
                 participantsRepository.findBySessionId(session.id());
         final boolean isMember = participants
-                .map(p -> p.getPlayers().contains(name))
-                .orElse(session.creatorUsername().equals(name));
+                .map(p -> p.getPlayers().stream().anyMatch(player -> player.equalsIgnoreCase(name)))
+                .orElse(session.creatorUsername().equalsIgnoreCase(name));
         if (!isMember) {
             throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
         }
         if (participants.map(p -> !p.isActive()).orElse(false)) {
             throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
         }
+    }
+
+    private record MutationResult(GameState state, SharedStateUpdate update) {
     }
 }
