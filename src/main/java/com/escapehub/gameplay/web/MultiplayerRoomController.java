@@ -2,12 +2,14 @@ package com.escapehub.gameplay.web;
 
 import com.escapehub.gameplay.domain.Room;
 import java.security.Principal;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /** Serves the multiplayer room layout and its read-only object-inspection resource. */
