@@ -154,15 +154,31 @@ test('clicking the notebook in the room canvas requests its inspection', async (
     assert.equal(harness.details.hidden, false);
 });
 
-test('clicking elsewhere on the room canvas does not inspect an object', () => {
+test('clicking the nearby bench does not inspect the notebook', () => {
+    let requestCount = 0;
     const harness = createHarness(async () => {
-        throw new Error('Unexpected inspection request');
+        requestCount += 1;
+        return { ok: true, json: async () => ({}) };
     });
 
-    harness.clickCanvas(500, 400);
+    harness.clickCanvas(260, 220);
 
+    assert.equal(requestCount, 0);
     assert.equal(harness.details.hidden, true);
     assert.equal(harness.button.disabled, false);
+});
+
+test('clicking outside the notebook bounds does not inspect it', () => {
+    let requestCount = 0;
+    const harness = createHarness(async () => {
+        requestCount += 1;
+        return { ok: true, json: async () => ({}) };
+    });
+
+    harness.clickCanvas(320, 220);
+
+    assert.equal(requestCount, 0);
+    assert.equal(harness.details.hidden, true);
 });
 
 test('a rejected inspection shows an error without exposing details', async () => {

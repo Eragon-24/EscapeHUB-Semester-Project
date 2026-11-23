@@ -27,7 +27,7 @@
 
                     const x = (event.clientX - bounds.left) * this.canvas.width / bounds.width;
                     const y = (event.clientY - bounds.top) * this.canvas.height / bounds.height;
-                    if (x < 250 || x > 335 || y < 190 || y > 275) {
+                    if (x < 272 || x > 314 || y < 207 || y > 239) {
                         return;
                     }
 
