@@ -8,7 +8,7 @@
     <title th:text="${roomName} + ' - Multiplayer Room'">EscapeHub - Multiplayer Room</title>
     <link rel="stylesheet" th:href="@{/css/multiplayer-room.css}">
 </head>
-<body class="multiplayer-room-page">
+<body class="multiplayer-room-page" th:attr="data-session-left=${sessionLeft != null}">
 <main class="multiplayer-shell">
     <header class="room-header">
         <p class="eyebrow">EscapeHub · US-014 · Room View</p>
@@ -55,6 +55,13 @@
 
             <section class="room-card">
                 <h2>Συμμετέχοντες</h2>
+                <p class="muted-message" th:if="${leaveSessionMessage != null}" th:text="${leaveSessionMessage}">
+                    Επιβεβαίωση αποχώρησης.
+                </p>
+                <p class="muted-message" th:if="${leaveSessionErrorMessage != null}"
+                   th:text="${leaveSessionErrorMessage}">
+                    Δεν ήταν δυνατή η αποχώρηση από τη συνεδρία.
+                </p>
                 <div class="created-session" th:if="${joinedSessionCode != null}">
                     <p>Συμμετέχεις στη συνεδρία: <code th:text="${joinedSessionCode}">ABC234</code></p>
                     <p>Παίκτες (<span th:text="${#sets.size(sessionPlayers)}">1</span>/6):</p>
@@ -80,14 +87,19 @@
                            required>
                     <button type="submit">Συμμετοχή σε συνεδρία</button>
                 </form>
+                <form th:if="${canLeaveSession}"
+                      th:action="@{/game-sessions/{code}/leave(code=${activeSessionCode})}"
+                      method="post">
+                    <button type="submit">Αποχώρηση από τη συνεδρία</button>
+                </form>
                 <p th:unless="${canCreateSession}" class="muted-message">
                     Για συμμετοχή σε συνεδρία απαιτείται σύνδεση χρήστη.
                 </p>
             </section>
 
             <section class="room-card" id="shared-state-card"
-                     th:if="${param.sessionId != null or createdSessionId != null or joinedSessionId != null}"
-                     th:data-session-id="${param.sessionId != null ? param.sessionId[0] : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                     th:if="${activeSessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
                 <ul id="shared-state-list"></ul>
