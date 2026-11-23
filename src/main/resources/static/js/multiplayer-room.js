@@ -12,6 +12,7 @@
     }
 
     var storageKey = 'escapehub.activeSessionId';
+    var sessionLeft = document.body.getAttribute('data-session-left') === 'true';
     var playerRadius = 18;
     var moveStep = 12;
     var localPlayer = { x: 480, y: 490 };
@@ -24,6 +25,14 @@
     ];
 
     function resolveSessionId() {
+        if (sessionLeft) {
+            try {
+                window.sessionStorage.removeItem(storageKey);
+            } catch (e) {
+                // Ignore storage restrictions
+            }
+            return null;
+        }
         var fromAttr = canvas.getAttribute('data-session-id');
         var fromUrl = new URLSearchParams(window.location.search).get('sessionId');
         var resolved = fromAttr || fromUrl;

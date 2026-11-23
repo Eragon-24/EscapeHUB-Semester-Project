@@ -69,4 +69,17 @@ public class SessionParticipants {
         }
         players.add(cleanUsername);
     }
+
+    /**
+     * Removes a player from the active participant list.
+     *
+     * @param username authenticated player's username
+     */
+    public void removePlayer(final String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username must not be blank");
+        }
+        final String cleanUsername = username.trim();
+        players.removeIf(player -> player.equalsIgnoreCase(cleanUsername));
+    }
 }
