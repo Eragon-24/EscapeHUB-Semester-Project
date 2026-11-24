@@ -108,46 +108,26 @@
                 <ul id="shared-state-list"></ul>
             </section>
 
-            <section class="room-card nearby-object-inspection"
-                     aria-labelledby="nearby-object-inspection-heading">
-                <h2 id="nearby-object-inspection-heading">Αντικείμενα προς εξέταση</h2>
-                <p class="muted-message">Επίλεξε ένα αντικείμενο ή κάνε κλικ πάνω του στον χώρο.</p>
-                <ul class="nearby-object-inspection__objects">
-                    <li th:each="object : ${inspectableObjects}">
-                        <button type="button"
-                                class="nearby-object-inspection__button"
-                                th:attr="data-inspect-object-id=${object.id}"
-                                th:text="${object.name}">
-                            Εξέταση αντικειμένου
-                        </button>
-                    </li>
-                </ul>
-                <p class="nearby-object-inspection__status"
-                   role="status"
-                   aria-live="polite">
-                    Διάλεξε ένα αντικείμενο για εξέταση.
-                </p>
-                <article class="nearby-object-inspection__details"
-                         aria-live="polite"
-                         hidden>
-                    <h3></h3>
-                    <p></p>
-                </article>
-            </section>
-
-            <section class="room-card">
-                <h2>Επεκτάσεις multiplayer</h2>
-                <p class="muted-message">
-                    Η κοινή κατάσταση, η κίνηση, οι αλληλεπιδράσεις, το ημερολόγιο
-                    στοιχείων και η πρόοδος γρίφων παραμένουν σημεία επέκτασης για
-                    τα US-013 και US-015 έως US-018.
-                </p>
-            </section>
-
-            <a class="back-link" th:href="@{/room}">← Επιστροφή στο αρχικό room demo</a>
+            <a class="back-link" th:href="@{/}">← Επιστροφή στην Αρχική</a>
         </aside>
     </section>
+
+    <dialog id="object-inspection-dialog" class="object-inspection-dialog">
+        <div class="object-inspection-content">
+            <button type="button"
+                    id="close-inspection-dialog"
+                    class="close-inspection-dialog"
+                    aria-label="Κλείσιμο">
+                &times;
+            </button>
+            <p class="eyebrow">Εξέταση αντικειμένου</p>
+            <h2 id="inspection-object-name"></h2>
+            <p id="inspection-object-description"></p>
+        </div>
+    </dialog>
+
 </main>
+
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
