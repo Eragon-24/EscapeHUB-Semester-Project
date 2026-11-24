@@ -16,6 +16,14 @@
     var playerRadius = 18;
     var moveStep = 12;
     var localPlayer = { x: 480, y: 490 };
+
+    window.escapeHubGetPlayerPosition = function () {
+        return {
+            x: localPlayer.x,
+            y: localPlayer.y
+        };
+    };
+
     var otherPlayers = [];
     var pollIntervalMs = 300;
     var obstacles = [
@@ -305,18 +313,17 @@
             }
             var dx = 0;
             var dy = 0;
-            if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'W') {
+            if (event.code === 'ArrowUp' || event.code === 'KeyW') {
                 dy = -moveStep;
-            } else if (event.key === 'ArrowDown' || event.key === 's' || event.key === 'S') {
+            } else if (event.code === 'ArrowDown' || event.code === 'KeyS') {
                 dy = moveStep;
-            } else if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
+            } else if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
                 dx = -moveStep;
-            } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
+            } else if (event.code === 'ArrowRight' || event.code === 'KeyD') {
                 dx = moveStep;
             } else {
                 return;
             }
-
             event.preventDefault();
             var moved = false;
             if (dx !== 0 && canMoveTo(localPlayer.x + dx, localPlayer.y)) {

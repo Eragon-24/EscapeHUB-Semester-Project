@@ -1,118 +1,161 @@
+
 (function () {
     'use strict';
 
     class NearbyObjectInspection {
-        constructor(sidebar) {
-            this.sidebar = sidebar;
-            this.pendingObjectId = null;
-            this.card = sidebar.querySelector('.nearby-object-inspection');
-            if (!this.card) {
+        constructor() {
+            this.canvas = document.getElementById('room-canvas');
+            this.dialog = document.getElementById('object-inspection-dialog');
+            this.closeButton = document.getElementById('close-inspection-dialog');
+            this.objectName = document.getElementById('inspection-object-name');
+            this.objectDescription = document.getElementById('inspection-object-description');
+
+            this.pending = false;
+            this.interactionDistance = 75;
+
+            this.notebook = {
+                x: 293,
+                y: 223,
+                id: 'Παλιό Σημειωματάριο',
+                name: 'Σημειωματάριο'
+            };
+
+            if (!this.canvas || !this.dialog) {
                 return;
             }
-            this.canvas = document.getElementById('room-canvas');
 
-            this.card.addEventListener('click', (event) => {
-                const button = event.target.closest('[data-inspect-object-id]');
-                if (button && this.card.contains(button)) {
-                    this.requestInspection(button.dataset.inspectObjectId);
+            this.createInteractionPrompt();
+
+            this.closeButton.addEventListener('click', () => {
+                this.dialog.close();
+            });
+
+            this.dialog.addEventListener('click', (event) => {
+                if (event.target === this.dialog) {
+                    this.dialog.close();
                 }
             });
 
-            if (this.canvas) {
-                this.canvas.addEventListener('click', (event) => {
-                    const bounds = this.canvas.getBoundingClientRect();
-                    if (!bounds.width || !bounds.height) {
-                        return;
-                    }
+            window.addEventListener('keydown', (event) => {
+                if (event.target &&
+                    (event.target.tagName === 'INPUT' ||
+                        event.target.tagName === 'TEXTAREA')) {
+                    return;
+                }
 
-                    const x = (event.clientX - bounds.left) * this.canvas.width / bounds.width;
-                    const y = (event.clientY - bounds.top) * this.canvas.height / bounds.height;
-                    if (x < 272 || x > 314 || y < 207 || y > 239) {
-                        return;
-                    }
+                if (event.code !== 'KeyE') {
+                    return;
+                }
 
-                    const button = this.card.querySelector('[data-inspect-object-id]');
-                    if (button) {
-                        this.requestInspection(button.dataset.inspectObjectId);
-                    }
-                });
+                event.preventDefault();
+
+                if (this.isPlayerNearNotebook()) {
+                    this.requestInspection(this.notebook.id);
+                }
+            });
+
+            this.updateInterval = window.setInterval(() => {
+                this.updateInteractionPrompt();
+            }, 100);
+
+            this.updateInteractionPrompt();
+        }
+
+        createInteractionPrompt() {
+            this.prompt = document.createElement('div');
+            this.prompt.className = 'interaction-prompt';
+            this.prompt.textContent = 'E — Εξέταση ' + this.notebook.name;
+            this.prompt.hidden = true;
+
+            this.canvas.insertAdjacentElement('afterend', this.prompt);
+        }
+
+
+        isPlayerNearNotebook() {
+            if (typeof window.escapeHubGetPlayerPosition !== 'function') {
+                return false;
             }
+
+            const player = window.escapeHubGetPlayerPosition();
+
+            const notebookLeft = 272;
+            const notebookRight = 314;
+            const notebookTop = 207;
+            const notebookBottom = 239;
+
+            const closestX = Math.max(
+                notebookLeft,
+                Math.min(player.x, notebookRight)
+            );
+
+            const closestY = Math.max(
+                notebookTop,
+                Math.min(player.y, notebookBottom)
+            );
+
+            const dx = player.x - closestX;
+            const dy = player.y - closestY;
+
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            return distance <= this.interactionDistance;
+        }
+
+
+        updateInteractionPrompt() {
+            if (this.dialog.open || this.pending) {
+                this.prompt.hidden = true;
+                return;
+            }
+
+            this.prompt.hidden = !this.isPlayerNearNotebook();
         }
 
         requestInspection(objectId) {
-            if (!objectId || this.pendingObjectId !== null) {
+            if (this.pending || this.dialog.open ||
+                !this.isPlayerNearNotebook()) {
                 return;
             }
 
-            this.pendingObjectId = objectId;
-            this.hideDetails();
-            this.setStatus('Έλεγχος δυνατότητας εξέτασης...');
-            this.setButtonsDisabled(true);
+            this.pending = true;
+            this.prompt.hidden = true;
+
+            this.objectName.textContent = 'Εξέταση αντικειμένου';
+            this.objectDescription.textContent = 'Έλεγχος...';
+            this.dialog.showModal();
+
             fetch('/api/room/objects/' + encodeURIComponent(objectId) + '/inspection')
                 .then((response) => {
                     if (!response.ok) {
-                        throw new Error('Το αντικείμενο δεν μπορεί να εξεταστεί αυτή τη στιγμή.');
+                        throw new Error(
+                            'Δεν ήταν δυνατή η εξέταση αυτού του αντικειμένου.'
+                        );
                     }
+
                     return response.json();
                 })
-                .then((result) => this.renderResult(objectId, result))
-                .catch((error) => this.renderFailure(objectId, error));
-        }
+                .then((result) => {
+                    if (typeof result.name !== 'string' ||
+                        typeof result.description !== 'string') {
+                        throw new Error('Μη έγκυρη απάντηση από τον διακομιστή.');
+                    }
 
-        renderResult(objectId, result) {
-            if (this.pendingObjectId !== objectId) {
-                return;
-            }
-
-            this.pendingObjectId = null;
-            this.setButtonsDisabled(false);
-            this.hideDetails();
-
-            if (result && typeof result.name === 'string'
-                    && typeof result.description === 'string') {
-                const details = this.card.querySelector(
-                    '.nearby-object-inspection__details'
-                );
-                details.querySelector('h3').textContent = result.name;
-                details.querySelector('p').textContent = result.description;
-                details.hidden = false;
-                this.setStatus('Οι πληροφορίες του αντικειμένου εμφανίζονται παρακάτω.');
-                return;
-            }
-
-            this.setStatus('Ο διακομιστής επέστρεψε μη έγκυρες πληροφορίες αντικειμένου.');
-        }
-
-        renderFailure(objectId, error) {
-            if (this.pendingObjectId !== objectId) {
-                return;
-            }
-
-            this.pendingObjectId = null;
-            this.setButtonsDisabled(false);
-            this.hideDetails();
-            this.setStatus(error.message);
-        }
-
-        setButtonsDisabled(disabled) {
-            this.card.querySelectorAll('[data-inspect-object-id]').forEach((button) => {
-                button.disabled = disabled;
-            });
-        }
-
-        setStatus(message) {
-            this.card.querySelector('.nearby-object-inspection__status').textContent = message;
-        }
-
-        hideDetails() {
-            this.card.querySelector('.nearby-object-inspection__details').hidden = true;
+                    this.objectName.textContent = result.name;
+                    this.objectDescription.textContent = result.description;
+                })
+                .catch((error) => {
+                    this.objectName.textContent = 'Δεν ήταν δυνατή η εξέταση';
+                    this.objectDescription.textContent = error.message;
+                })
+                .finally(() => {
+                    this.pending = false;
+                });
         }
     }
 
     window.NearbyObjectInspection = NearbyObjectInspection;
 
-    const sidebar = document.querySelector('.room-sidebar');
-    if (sidebar) {
-        new NearbyObjectInspection(sidebar);
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        new NearbyObjectInspection();
+    });
 })();
