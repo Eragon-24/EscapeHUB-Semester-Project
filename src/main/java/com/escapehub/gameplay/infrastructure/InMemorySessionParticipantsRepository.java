@@ -6,12 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
-
 /**
  * Temporary in-memory adapter for session participants.
  */
 @Repository
+@Profile("local")
 public class InMemorySessionParticipantsRepository implements SessionParticipantsRepository {
 
     private final Map<UUID, SessionParticipants> storage = new HashMap<>();

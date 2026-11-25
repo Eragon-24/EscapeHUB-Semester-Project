@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
-
 /**
  * Temporary in-memory adapter for game-session metadata.
  *
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
  * creation use case or the join-code lookup contract.</p>
  */
 @Repository
+@Profile("local")
 public class InMemoryGameSessionRepository implements GameSessionRepository {
 
     private final Map<UUID, GameSession> sessions = new HashMap<>();

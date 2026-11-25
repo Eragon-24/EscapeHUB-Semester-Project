@@ -1,6 +1,8 @@
+
 package com.escapehub.gameplay.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,20 +24,30 @@ class OtherPlayersMovementServiceTest {
     private CreateGameSessionService createSessionService;
     private JoinGameSessionService joinSessionService;
     private InMemorySessionParticipantsRepository participantsRepository;
+    private InMemorySessionPlayerPositionsRepository positionsRepository;
     private OtherPlayersMovementService service;
     private GameSession session;
 
     @BeforeEach
     void setUp() {
-        final InMemoryGameSessionRepository sessionRepository = new InMemoryGameSessionRepository();
+        final InMemoryGameSessionRepository sessionRepository =
+                new InMemoryGameSessionRepository();
+
         participantsRepository = new InMemorySessionParticipantsRepository();
+        positionsRepository = new InMemorySessionPlayerPositionsRepository();
+
         createSessionService = new CreateGameSessionService(sessionRepository);
-        joinSessionService = new JoinGameSessionService(sessionRepository, participantsRepository);
-        service = new OtherPlayersMovementService(
-                new InMemorySessionPlayerPositionsRepository(),
+        joinSessionService = new JoinGameSessionService(
                 sessionRepository,
                 participantsRepository
         );
+
+        service = new OtherPlayersMovementService(
+                positionsRepository,
+                sessionRepository,
+                participantsRepository
+        );
+
         session = createSessionService.createSession("player1");
         joinSessionService.joinSession(session.joinCode(), "player2");
         joinSessionService.joinSession(session.joinCode(), "player3");
@@ -43,13 +55,17 @@ class OtherPlayersMovementServiceTest {
 
     @Test
     void shouldReturnOnlyOtherPlayersWithTheirLatestPositions() {
-        service.updatePlayerPosition(session.id(), "player1", new PlayerPosition(480, 490));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(500, 350));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(520, 360));
-        service.updatePlayerPosition(session.id(), "player3", new PlayerPosition(600, 400));
+        service.updatePlayerPosition(
+                session.id(), "player1", new PlayerPosition(480, 490));
+        service.updatePlayerPosition(
+                session.id(), "player2", new PlayerPosition(500, 350));
+        service.updatePlayerPosition(
+                session.id(), "player2", new PlayerPosition(520, 360));
+        service.updatePlayerPosition(
+                session.id(), "player3", new PlayerPosition(600, 400));
 
-        final List<OtherPlayerView> othersForPlayer1 = service
-                .getOtherPlayersPositions(session.id(), "player1");
+        final List<OtherPlayerView> othersForPlayer1 =
+                service.getOtherPlayersPositions(session.id(), "player1");
 
         assertEquals(2, othersForPlayer1.size());
         assertEquals(
@@ -82,13 +98,49 @@ class OtherPlayersMovementServiceTest {
     }
 
     @Test
-    void shouldRemovePlayerFromVisibleOthersWhenLeaving() {
-        service.updatePlayerPosition(session.id(), "player1", new PlayerPosition(480, 490));
-        service.updatePlayerPosition(session.id(), "player2", new PlayerPosition(500, 350));
+    void shouldHidePlayerWithoutDeletingLastKnownPosition() {
+        service.updatePlayerPosition(
+                session.id(), "player1", new PlayerPosition(480, 490));
+        service.updatePlayerPosition(
+                session.id(), "player2", new PlayerPosition(500, 350));
 
         service.removePlayer(session.id(), "player2");
 
-        assertTrue(service.getOtherPlayersPositions(session.id(), "player1").isEmpty());
+        assertTrue(
+                service.getOtherPlayersPositions(session.id(), "player1").isEmpty()
+        );
+
+        final var positions = positionsRepository.findBySessionId(session.id())
+                .orElseThrow();
+
+        assertTrue(positions.getPositions().containsKey("player2"));
+        assertEquals(
+                new PlayerPosition(500, 350),
+                positions.getPositions().get("player2")
+        );
+        assertFalse(positions.isVisible("player2"));
+    }
+
+    @Test
+    void shouldShowPlayerAgainAfterPositionUpdate() {
+        service.updatePlayerPosition(
+                session.id(), "player1", new PlayerPosition(480, 490));
+        service.updatePlayerPosition(
+                session.id(), "player2", new PlayerPosition(500, 350));
+
+        service.removePlayer(session.id(), "player2");
+
+        service.updatePlayerPosition(
+                session.id(), "player2", new PlayerPosition(520, 360));
+
+        final List<OtherPlayerView> others =
+                service.getOtherPlayersPositions(session.id(), "player1");
+
+        assertEquals(1, others.size());
+        assertEquals(
+                new OtherPlayerView("player2", new PlayerPosition(520, 360)),
+                others.get(0)
+        );
     }
 
     @Test
@@ -107,7 +159,8 @@ class OtherPlayersMovementServiceTest {
     void shouldRejectUnknownSession() {
         assertThrows(
                 NoSuchElementException.class,
-                () -> service.getOtherPlayersPositions(UUID.randomUUID(), "player1")
+                () -> service.getOtherPlayersPositions(
+                        UUID.randomUUID(), "player1")
         );
     }
 
@@ -116,6 +169,7 @@ class OtherPlayersMovementServiceTest {
         final SessionParticipants participants = participantsRepository
                 .findBySessionId(session.id())
                 .orElseThrow();
+
         participants.deactivate();
         participantsRepository.save(participants);
 
