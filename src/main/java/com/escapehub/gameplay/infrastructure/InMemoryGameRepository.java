@@ -6,9 +6,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@Profile("local")
 public class InMemoryGameRepository implements GameRepository {
 
     private final Map<UUID, Game> games = new HashMap<>();

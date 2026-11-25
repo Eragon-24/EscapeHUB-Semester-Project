@@ -84,7 +84,6 @@ public class OtherPlayersMovementService {
         movementValidator.validate(position);
         final SessionPlayerPositions tracked = repository.findBySessionId(sessionId)
                 .orElseGet(() -> new SessionPlayerPositions(sessionId));
-        tracked.retainPlayers(activePlayers);
         tracked.updatePosition(username, position);
         repository.save(tracked);
     }
@@ -120,9 +119,7 @@ public class OtherPlayersMovementService {
             return List.of();
         }
         final SessionPlayerPositions tracked = trackedOptional.get();
-        tracked.retainPlayers(activePlayers);
-        repository.save(tracked);
-        return tracked.getOtherPlayers(viewerUsername);
+        return tracked.getOtherPlayers(viewerUsername, activePlayers);
     }
 
     private GameSession requireExistingSession(final UUID sessionId) {
