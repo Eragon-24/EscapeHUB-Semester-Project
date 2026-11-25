@@ -2,7 +2,7 @@
 
 Place Flyway migrations here using names such as `V1__create_users_and_teams.sql`.
 
-The first schema migration is intentionally not included yet: the ER model and entity relationships
-must be reviewed and approved before creating production tables. The default `local` profile uses
-an in-memory H2 database so the application can be opened and started without PostgreSQL.
-Use the `postgres` profile to work against the PostgreSQL service from `compose.yaml`.
+`V1__create_shared_game_state.sql` stores each session's authoritative room state, shared attributes,
+completed puzzles, collected items, exit state, and version. The default `local` profile applies the
+migration to in-memory H2; the `postgres` profile applies the same migration to PostgreSQL.
+Session metadata and participant membership still use in-memory adapters.

@@ -25,6 +25,19 @@ public class Game {
         this.sessionId = Objects.requireNonNull(sessionId, "Session id must not be null");
     }
 
+    public static Game restore(final GameState state) {
+        Objects.requireNonNull(state, "Game state must not be null");
+        final Game game = new Game(state.sessionId());
+        game.currentRoomId = state.currentRoomId();
+        game.status = state.status();
+        game.attributes.putAll(state.attributes());
+        game.completedPuzzleIds.addAll(state.completedPuzzleIds());
+        game.collectedItems.addAll(state.collectedItems());
+        game.exitUnlocked = state.exitUnlocked();
+        game.version = state.version();
+        return game;
+    }
+
     public UUID getSessionId() {
         return sessionId;
     }

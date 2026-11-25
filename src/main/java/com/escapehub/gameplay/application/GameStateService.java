@@ -13,6 +13,8 @@ import com.escapehub.puzzle.domain.AnswerResult;
 import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -70,6 +72,7 @@ public class GameStateService {
         final Game game = requireGame(joinCode, username);
         synchronized (game) {
             game.changeRoom(roomId);
+            gameRepository.save(game);
             final GameState snapshot = game.snapshot();
             publishUpdate(snapshot, username, CURRENT_ROOM_KEY, snapshot.currentRoomId());
             return snapshot;
@@ -124,15 +127,18 @@ public class GameStateService {
                 return new PuzzleSubmissionResult(false, result.message(), game.snapshot());
             }
 
+            final List<PendingUpdate> updates = new ArrayList<>();
             if (game.completePuzzle(CHEST_PUZZLE_ID)) {
-                final GameState snapshot = game.snapshot();
-                publishUpdate(snapshot, username, "progress.puzzles." + CHEST_PUZZLE_ID, "true");
+                updates.add(new PendingUpdate(
+                        game.snapshot(), "progress.puzzles." + CHEST_PUZZLE_ID, "true"));
             }
             if (game.collectItem(ItemType.LAB_KEY)) {
-                final GameState snapshot = game.snapshot();
-                publishUpdate(snapshot, username, "progress.items." + ItemType.LAB_KEY.name(), "true");
+                updates.add(new PendingUpdate(
+                        game.snapshot(), "progress.items." + ItemType.LAB_KEY.name(), "true"));
             }
-            unlockExitIfRequirementsMet(game, username);
+            unlockExitIfRequirementsMet(game, updates);
+            gameRepository.save(game);
+            updates.forEach(update -> publishUpdate(update.state(), username, update.key(), update.value()));
             return new PuzzleSubmissionResult(true, result.message(), game.snapshot());
         }
     }
@@ -142,6 +148,7 @@ public class GameStateService {
         final Game game = requireGame(joinCode, username);
         synchronized (game) {
             game.putAttribute(key, value);
+            gameRepository.save(game);
             final GameState snapshot = game.snapshot();
             final SharedStateUpdate update = publishUpdate(snapshot, username, key.trim(), value);
             return new MutationResult(snapshot, update);
@@ -161,15 +168,14 @@ public class GameStateService {
         return update;
     }
 
-    private void unlockExitIfRequirementsMet(final Game game, final String username) {
+    private void unlockExitIfRequirementsMet(final Game game, final List<PendingUpdate> updates) {
         final GameState progress = game.snapshot();
         final boolean requirementsMet = exitAccessService.checkAccess(
                 LABORATORY_EXIT,
                 progress.completedPuzzleIds(),
                 progress.collectedItems()).allowed();
         if (requirementsMet && game.unlockExit()) {
-            final GameState snapshot = game.snapshot();
-            publishUpdate(snapshot, username, EXIT_UNLOCKED_KEY, "true");
+            updates.add(new PendingUpdate(game.snapshot(), EXIT_UNLOCKED_KEY, "true"));
         }
     }
 
@@ -208,5 +214,8 @@ public class GameStateService {
     }
 
     private record MutationResult(GameState state, SharedStateUpdate update) {
+    }
+
+    private record PendingUpdate(GameState state, String key, String value) {
     }
 }
