@@ -54,6 +54,7 @@ public class GameStateService {
         final Game game = requireGame(joinCode, username);
         synchronized (game) {
             game.changeRoom(roomId);
+            gameRepository.save(game);
             final GameState snapshot = game.snapshot();
             publishUpdate(snapshot, username, CURRENT_ROOM_KEY, snapshot.currentRoomId());
             return snapshot;
@@ -84,6 +85,7 @@ public class GameStateService {
         final Game game = requireGame(joinCode, username);
         synchronized (game) {
             game.putAttribute(key, value);
+            gameRepository.save(game);
             final GameState snapshot = game.snapshot();
             final SharedStateUpdate update = publishUpdate(snapshot, username, key.trim(), value);
             return new MutationResult(snapshot, update);

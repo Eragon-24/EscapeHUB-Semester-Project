@@ -16,8 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
-
 /**
  * Προσωρινή αποθήκευση ομάδων σε αρχείο txt (μέχρι να υπάρξει βάση δεδομένων).
  *
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Repository;
  * κλάση σβήνεται (ή χάνει το @Repository). Ο υπόλοιπος κώδικας δεν αλλάζει.
  */
 @Repository
+@Profile("local")
 public class FileTeamRepository implements TeamRepository {
 
     private final Path file;

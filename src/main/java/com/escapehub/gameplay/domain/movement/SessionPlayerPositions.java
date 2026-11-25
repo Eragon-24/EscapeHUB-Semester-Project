@@ -1,7 +1,9 @@
+
 package com.escapehub.gameplay.domain.movement;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,20 +11,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * US-017: Tracks live player positions within a game session and builds
- * views of other players' movements relative to a viewer.
- */
 public class SessionPlayerPositions {
 
     private final UUID sessionId;
     private final Map<String, PlayerPosition> positions = new LinkedHashMap<>();
+    private final Set<String> hiddenPlayers = new HashSet<>();
 
-    /**
-     * Creates a position tracker for a specific game session.
-     *
-     * @param sessionId unique session identifier
-     */
     public SessionPlayerPositions(final UUID sessionId) {
         this.sessionId = Objects.requireNonNull(sessionId, "Session id must not be null");
     }
@@ -31,52 +25,81 @@ public class SessionPlayerPositions {
         return sessionId;
     }
 
-    /**
-     * Updates or registers a player's current position in the session.
-     *
-     * @param username authenticated player's username
-     * @param position validated room coordinates
-     */
+    public Map<String, PlayerPosition> getPositions() {
+        return Collections.unmodifiableMap(positions);
+    }
+
     public void updatePosition(final String username, final PlayerPosition position) {
         final String cleanUsername = normalizeUsername(username);
         Objects.requireNonNull(position, "Player position must not be null");
+
         positions.put(cleanUsername, position);
+        hiddenPlayers.removeIf(name -> name.equalsIgnoreCase(cleanUsername));
     }
 
     /**
-     * Removes a player from the tracked room positions (e.g. when leaving).
-     *
-     * @param username player's username to remove
+     * Hides a player without deleting their last known position.
      */
     public void removePlayer(final String username) {
         final String cleanUsername = normalizeUsername(username);
-        positions.remove(cleanUsername);
+
+        if (positions.keySet().stream()
+                .anyMatch(name -> name.equalsIgnoreCase(cleanUsername))) {
+            hiddenPlayers.add(cleanUsername);
+        }
     }
 
-    /**
-     * Retains only positions belonging to currently active session participants.
-     *
-     * @param activePlayers set of usernames still participating in the session
-     */
+    public boolean isVisible(final String username) {
+        final String cleanUsername = normalizeUsername(username);
+
+        return hiddenPlayers.stream()
+                .noneMatch(name -> name.equalsIgnoreCase(cleanUsername));
+    }
+
     public void retainPlayers(final Set<String> activePlayers) {
         Objects.requireNonNull(activePlayers, "Active players must not be null");
-        positions.keySet().retainAll(activePlayers);
+
+        positions.keySet().removeIf(username ->
+                activePlayers.stream().noneMatch(
+                        name -> name.equalsIgnoreCase(username)));
+
+        hiddenPlayers.removeIf(username ->
+                positions.keySet().stream().noneMatch(
+                        name -> name.equalsIgnoreCase(username)));
     }
 
-    /**
-     * Returns the positions of all players in the session except the viewer.
-     *
-     * @param viewerUsername username of the player viewing the room
-     * @return unmodifiable list of other players and their positions
-     */
     public List<OtherPlayerView> getOtherPlayers(final String viewerUsername) {
         final String cleanViewer = normalizeUsername(viewerUsername);
         final List<OtherPlayerView> others = new ArrayList<>();
+
         for (Map.Entry<String, PlayerPosition> entry : positions.entrySet()) {
-            if (!entry.getKey().equals(cleanViewer)) {
+            if (!entry.getKey().equalsIgnoreCase(cleanViewer)
+                    && isVisible(entry.getKey())) {
                 others.add(new OtherPlayerView(entry.getKey(), entry.getValue()));
             }
         }
+
+        return Collections.unmodifiableList(others);
+    }
+
+    public List<OtherPlayerView> getOtherPlayers(
+            final String viewerUsername, final Set<String> activePlayers) {
+        final String cleanViewer = normalizeUsername(viewerUsername);
+        Objects.requireNonNull(activePlayers, "Active players must not be null");
+
+        final List<OtherPlayerView> others = new ArrayList<>();
+
+        for (Map.Entry<String, PlayerPosition> entry : positions.entrySet()) {
+            boolean active = activePlayers.stream().anyMatch(
+                    name -> name.equalsIgnoreCase(entry.getKey()));
+
+            if (active
+                    && isVisible(entry.getKey())
+                    && !entry.getKey().equalsIgnoreCase(cleanViewer)) {
+                others.add(new OtherPlayerView(entry.getKey(), entry.getValue()));
+            }
+        }
+
         return Collections.unmodifiableList(others);
     }
 
@@ -84,6 +107,7 @@ public class SessionPlayerPositions {
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException("Username must not be blank");
         }
+
         return username.trim();
     }
 }
