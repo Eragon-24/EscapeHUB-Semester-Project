@@ -3,24 +3,40 @@ package com.escapehub.gameplay.application;
 import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.ExitAccessService;
+import com.escapehub.gameplay.domain.ItemType;
+import com.escapehub.gameplay.domain.PuzzleSubmissionResult;
+import com.escapehub.gameplay.domain.RoomExit;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
+import com.escapehub.puzzle.domain.AnswerResult;
+import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
 public class GameStateService {
 
     private static final String CURRENT_ROOM_KEY = "game.currentRoomId";
+    private static final String EXIT_UNLOCKED_KEY = "game.exitUnlocked";
+    private static final String CHEST_PUZZLE_ID = "chest";
+    private static final String CHEST_CODE = "483920";
+    private static final RoomExit LABORATORY_EXIT = new RoomExit(
+            "LAB_EXIT",
+            "STORAGE_ROOM",
+            Set.of(ItemType.LAB_KEY),
+            Set.of(CHEST_PUZZLE_ID));
 
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
     private final GameRepository gameRepository;
     private final SessionUpdateChannel updateChannel;
     private final Clock clock;
+    private final ExitAccessService exitAccessService = new ExitAccessService();
 
     public GameStateService(
             final GameSessionRepository gameSessionRepository,
@@ -79,6 +95,48 @@ public class GameStateService {
         return mutateAttribute(joinCode, username, key, value).update();
     }
 
+    /**
+     * Validates a puzzle answer and records resulting progress in this session's shared game.
+     *
+     * @param joinCode session join code
+     * @param username authenticated participant
+     * @param puzzleId puzzle identifier
+     * @param answer submitted answer
+     * @return validation feedback and the resulting authoritative game state
+     */
+    public synchronized PuzzleSubmissionResult submitPuzzleAnswer(
+            final String joinCode,
+            final String username,
+            final String puzzleId,
+            final String answer) {
+        final Game game = requireGame(joinCode, username);
+        if (!CHEST_PUZZLE_ID.equals(puzzleId)) {
+            throw new IllegalArgumentException("Unknown puzzle.");
+        }
+
+        synchronized (game) {
+            if (game.snapshot().completedPuzzleIds().contains(CHEST_PUZZLE_ID)) {
+                return new PuzzleSubmissionResult(true, AnswerResult.SUCCESS_MESSAGE, game.snapshot());
+            }
+
+            final AnswerResult result = new ChestPuzzle(CHEST_CODE).check(answer);
+            if (!result.correct()) {
+                return new PuzzleSubmissionResult(false, result.message(), game.snapshot());
+            }
+
+            if (game.completePuzzle(CHEST_PUZZLE_ID)) {
+                final GameState snapshot = game.snapshot();
+                publishUpdate(snapshot, username, "progress.puzzles." + CHEST_PUZZLE_ID, "true");
+            }
+            if (game.collectItem(ItemType.LAB_KEY)) {
+                final GameState snapshot = game.snapshot();
+                publishUpdate(snapshot, username, "progress.items." + ItemType.LAB_KEY.name(), "true");
+            }
+            unlockExitIfRequirementsMet(game, username);
+            return new PuzzleSubmissionResult(true, result.message(), game.snapshot());
+        }
+    }
+
     private MutationResult mutateAttribute(
             final String joinCode, final String username, final String key, final String value) {
         final Game game = requireGame(joinCode, username);
@@ -101,6 +159,18 @@ public class GameStateService {
                 Instant.now(clock));
         updateChannel.publish(update);
         return update;
+    }
+
+    private void unlockExitIfRequirementsMet(final Game game, final String username) {
+        final GameState progress = game.snapshot();
+        final boolean requirementsMet = exitAccessService.checkAccess(
+                LABORATORY_EXIT,
+                progress.completedPuzzleIds(),
+                progress.collectedItems()).allowed();
+        if (requirementsMet && game.unlockExit()) {
+            final GameState snapshot = game.snapshot();
+            publishUpdate(snapshot, username, EXIT_UNLOCKED_KEY, "true");
+        }
     }
 
     private Game requireGame(final String joinCode, final String username) {

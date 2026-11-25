@@ -105,6 +105,22 @@
                      th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
+                <p id="exit-status" class="muted-message" role="status" aria-live="polite">
+                    Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
+                </p>
+                <form id="chest-puzzle-form">
+                    <label for="chest-answer">Κωδικός σεντουκιού:</label>
+                    <input id="chest-answer"
+                           name="answer"
+                           type="text"
+                           inputmode="numeric"
+                           pattern="[0-9]{6}"
+                           maxlength="6"
+                           autocomplete="off"
+                           required>
+                    <button type="submit">Υποβολή κωδικού</button>
+                </form>
+                <p id="puzzle-feedback" class="muted-message" role="status" aria-live="polite"></p>
                 <ul id="shared-state-list"></ul>
             </section>
 

@@ -16,6 +16,7 @@
     var playerRadius = 18;
     var moveStep = 12;
     var localPlayer = { x: 480, y: 490 };
+    var exitUnlocked = false;
 
     window.escapeHubGetPlayerPosition = function () {
         return {
@@ -187,20 +188,20 @@
     }
 
     function drawExit() {
-        context.fillStyle = '#584136';
+        context.fillStyle = exitUnlocked ? '#416447' : '#584136';
         context.fillRect(430, 92, 100, 50);
-        context.strokeStyle = '#b1956a';
+        context.strokeStyle = exitUnlocked ? '#9bd19d' : '#b1956a';
         context.lineWidth = 3;
         context.strokeRect(430, 92, 100, 50);
 
-        context.fillStyle = '#e0be62';
+        context.fillStyle = exitUnlocked ? '#a8e6a8' : '#e0be62';
         context.beginPath();
         context.arc(514, 118, 4, 0, Math.PI * 2);
         context.fill();
 
         context.fillStyle = '#ebe6d6';
         context.font = 'bold 12px sans-serif';
-        context.fillText('ΕΞΟΔΟΣ', 458, 78);
+        context.fillText(exitUnlocked ? 'ΕΞΟΔΟΣ - ΞΕΚΛΕΙΔΩΤΗ' : 'ΕΞΟΔΟΣ - ΚΛΕΙΔΩΜΕΝΗ', 405, 78);
     }
 
     function drawPlayerAvatar(x, y, label, fillColor, strokeColor) {
@@ -306,6 +307,10 @@
     }
 
     if (sessionId) {
+        window.addEventListener('escapehub:exit-state', function (event) {
+            exitUnlocked = event.detail.exitUnlocked === true;
+            render();
+        });
         window.addEventListener('keydown', function (event) {
             if (event.target && (event.target.tagName === 'INPUT'
                 || event.target.tagName === 'TEXTAREA')) {

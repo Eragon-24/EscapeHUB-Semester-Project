@@ -4,7 +4,7 @@
 
 This repository contains the IntelliJ-ready project for the Software Engineering semester project.
 
-> Current status: V0.1.0 (US-001–US-006) is preserved as the first playable release. The browser room and game-session creation foundation on this branch covers US-011 and US-014 only.
+> Current status: V0.1.0 (US-001–US-006) is preserved as the first playable release. This branch also includes game sessions, shared progress, and the US-024 shared exit-unlock flow.
 
 ## Proposed stack
 
@@ -45,9 +45,9 @@ The branch provides a browser-based room view and the first game-session creatio
 - `InMemoryGameSessionRepository`: temporary adapter. It can be replaced with persistent storage without changing the application service.
 - The existing `GET /room` page and its V0.1 notebook interaction remain available; it links to the new room view.
 
-The room graphic is presentation-only. This branch intentionally does **not** implement participant joining, player presence, shared game state, live movement, shared object interactions, shared evidence, or shared puzzle progress. Those concerns remain with US-012, US-013, and US-015–US-018.
+Session participants share one authoritative game state. Puzzle answers are validated by the server, and the laboratory exit unlocks for the session after the chest puzzle is solved and its key is collected. The exit state is included in session snapshots and broadcast to connected participants over Server-Sent Events. Clients cannot write puzzle progress or the exit-unlocked state through the generic shared-state endpoint.
 
-Session metadata is currently in memory and is cleared when the server restarts. The room layout can be opened over a trusted local network when the local profile binds to `0.0.0.0:8080`; this does not yet provide live multiplayer synchronization. Do not configure router port forwarding.
+Session metadata and gameplay state currently use in-memory repositories and are cleared when the server restarts. The room layout can be opened over a trusted local network when the local profile binds to `0.0.0.0:8080`; do not configure router port forwarding.
 
 Session creation requires an authenticated principal. The UI exposes the create-session action after the authentication work (US-007/US-008) is integrated.
 
@@ -90,6 +90,8 @@ docker compose down -v
 - Original V0.1 room: `GET /room`
 - Browser room view: `GET /multiplayer-room`
 - Create game session: `POST /game-sessions`
+- Submit chest answer: `POST /game-sessions/{sessionId}/puzzles/chest/answer`
+- Subscribe to shared session updates: `GET /game-sessions/{sessionId}/events`
 - Basic API check: `GET /api/v1/health`
 - Spring Boot health: `GET /actuator/health`
 

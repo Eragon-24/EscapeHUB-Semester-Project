@@ -33,7 +33,7 @@ class JoinGameSessionControllerTest {
 
         final GameState state = new GameState(
                 participants.getSessionId(), Game.INITIAL_ROOM_ID, GameStatus.IN_PROGRESS,
-                Map.of(), 0);
+                Map.of(), java.util.Set.of(), java.util.Set.of(), false, 0);
         when(service.joinSession("abc234", "player2")).thenReturn(participants);
         when(gameStateService.enterGame("ABC234", "player2")).thenReturn(state);
 

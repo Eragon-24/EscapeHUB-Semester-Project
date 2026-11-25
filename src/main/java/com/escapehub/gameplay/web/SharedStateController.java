@@ -4,6 +4,7 @@ import com.escapehub.gameplay.application.SessionUpdateChannel;
 import com.escapehub.gameplay.application.SharedStateService;
 import com.escapehub.gameplay.application.StateChangeRejectedException;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.PuzzleSubmissionResult;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import java.io.IOException;
 import java.security.Principal;
@@ -104,6 +105,24 @@ public class SharedStateController {
     }
 
     /**
+     * Submits an answer to a puzzle in the participant's session.
+     *
+     * @param sessionId session identifier
+     * @param puzzleId puzzle identifier
+     * @param answer submitted answer
+     * @param principal authenticated participant
+     * @return validation result and authoritative updated game state
+     */
+    @PostMapping("/game-sessions/{sessionId}/puzzles/{puzzleId}/answer")
+    public PuzzleSubmissionResult submitPuzzleAnswer(
+            @PathVariable final UUID sessionId,
+            @PathVariable final String puzzleId,
+            @RequestParam final String answer,
+            final Principal principal) {
+        return service.submitPuzzleAnswer(sessionId, principal.getName(), puzzleId, answer);
+    }
+
+    /**
      * Maps an unknown session to 404.
      *
      * @param e the exception
@@ -122,6 +141,17 @@ public class SharedStateController {
      */
     @ExceptionHandler(StateChangeRejectedException.class)
     public ResponseEntity<Map<String, String>> rejected(final StateChangeRejectedException e) {
+        return error(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    /**
+     * Maps invalid puzzle identifiers and other malformed gameplay requests to 400.
+     *
+     * @param e the validation error
+     * @return the error body
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> badRequest(final IllegalArgumentException e) {
         return error(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

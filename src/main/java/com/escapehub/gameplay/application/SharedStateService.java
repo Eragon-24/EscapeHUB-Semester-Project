@@ -2,6 +2,7 @@ package com.escapehub.gameplay.application;
 
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.PuzzleSubmissionResult;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -24,7 +25,10 @@ public class SharedStateService {
     /** Longest allowed value. */
     public static final int MAX_VALUE_LENGTH = 1000;
 
-    private static final Set<String> RESERVED_KEYS = Set.of("game.currentRoomId", "game.status");
+    private static final Set<String> RESERVED_KEYS = Set.of(
+            "game.currentRoomId",
+            "game.status",
+            "game.exitUnlocked");
 
     private final GameSessionRepository sessions;
     private final SessionParticipantsRepository participants;
@@ -105,7 +109,8 @@ public class SharedStateService {
     public SharedStateUpdate applyChange(
             final UUID sessionId, final String username, final String key, final String value) {
         requireParticipant(sessionId, username);
-        if (key == null || !KEY_PATTERN.matcher(key).matches() || RESERVED_KEYS.contains(key)) {
+        if (key == null || !KEY_PATTERN.matcher(key).matches()
+                || RESERVED_KEYS.contains(key) || key.startsWith("progress.")) {
             throw new StateChangeRejectedException("Μη έγκυρο κλειδί κατάστασης.");
         }
         if (value == null || value.length() > MAX_VALUE_LENGTH) {
@@ -121,6 +126,31 @@ public class SharedStateService {
             // The session's Game is created lazily by US-013. Ensure it exists before applying the first update.
             gameStates.enterGame(session.joinCode(), author);
             return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, value);
+        } catch (SecurityException e) {
+            throw new AccessDeniedException(e.getMessage());
+        }
+    }
+
+    /**
+     * Validates and submits a participant's answer against a puzzle in their session.
+     *
+     * @param sessionId session identifier
+     * @param username authenticated participant
+     * @param puzzleId puzzle identifier
+     * @param answer submitted answer
+     * @return result and updated session state
+     */
+    public PuzzleSubmissionResult submitPuzzleAnswer(
+            final UUID sessionId,
+            final String username,
+            final String puzzleId,
+            final String answer) {
+        requireParticipant(sessionId, username);
+        final GameSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("Η συνεδρία δεν βρέθηκε."));
+        try {
+            gameStates.enterGame(session.joinCode(), username.trim());
+            return gameStates.submitPuzzleAnswer(session.joinCode(), username.trim(), puzzleId, answer);
         } catch (SecurityException e) {
             throw new AccessDeniedException(e.getMessage());
         }

@@ -26,6 +26,7 @@ class ExitAccessServiceTest {
 
         assertTrue(result.allowed());
         assertTrue(result.missingItems().isEmpty());
+        assertTrue(result.missingPuzzleIds().isEmpty());
     }
 
     @Test
@@ -98,6 +99,25 @@ class ExitAccessServiceTest {
 
         assertTrue(service.checkAccess(exit, firstSessionItems).allowed());
         assertFalse(service.checkAccess(exit, secondSessionItems).allowed());
+    }
+
+    @Test
+    void shouldRequireEveryConfiguredPuzzleAndItemBeforeAllowingExit() {
+        final RoomExit exit = new RoomExit(
+                "LAB_EXIT",
+                "STORAGE_ROOM",
+                Set.of(ItemType.LAB_KEY),
+                Set.of("chest", "generator"));
+
+        final ExitAccessResult missing = service.checkAccess(
+                exit, Set.of("chest"), Set.of(ItemType.LAB_KEY));
+        final ExitAccessResult complete = service.checkAccess(
+                exit, Set.of("chest", "generator"), Set.of(ItemType.LAB_KEY));
+
+        assertFalse(missing.allowed());
+        assertEquals(Set.of("generator"), missing.missingPuzzleIds());
+        assertTrue(missing.missingItems().isEmpty());
+        assertTrue(complete.allowed());
     }
 
     @Test

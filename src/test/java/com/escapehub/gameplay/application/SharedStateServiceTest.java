@@ -167,6 +167,10 @@ class SharedStateServiceTest {
                 () -> service.applyChange(session.id(), "alice", "bad key!", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "game.currentRoomId", "vault"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "game.exitUnlocked", "true"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "progress.puzzles.chest", "true"));
         assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "k", null));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "k", tooLong));

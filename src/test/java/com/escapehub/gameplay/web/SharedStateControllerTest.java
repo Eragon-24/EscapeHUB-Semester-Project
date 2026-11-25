@@ -78,6 +78,57 @@ class SharedStateControllerTest {
     }
 
     @Test
+    void validPuzzleAnswerUnlocksExitForSessionParticipants() throws Exception {
+        final List<SharedStateUpdate> bobsStream = new ArrayList<>();
+        channel.subscribe(session.id(), bobsStream::add);
+
+        mockMvc.perform(post("/game-sessions/" + session.id() + "/puzzles/chest/answer")
+                        .with(user("alice")).with(csrf()).param("answer", "483920"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.correct").value(true))
+                .andExpect(jsonPath("$.gameState.exitUnlocked").value(true))
+                .andExpect(jsonPath("$.gameState.completedPuzzleIds[0]").value("chest"))
+                .andExpect(jsonPath("$.gameState.collectedItems[0]").value("LAB_KEY"));
+
+        assertEquals(List.of(
+                "progress.puzzles.chest",
+                "progress.items.LAB_KEY",
+                "game.exitUnlocked"), bobsStream.stream().map(SharedStateUpdate::key).toList());
+    }
+
+    @Test
+    void incorrectPuzzleAnswerLeavesExitLocked() throws Exception {
+        mockMvc.perform(post("/game-sessions/" + session.id() + "/puzzles/chest/answer")
+                        .with(user("bob")).with(csrf()).param("answer", "000000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.correct").value(false))
+                .andExpect(jsonPath("$.gameState.exitUnlocked").value(false));
+    }
+
+    @Test
+    void participantCannotUsePuzzleProgressFromAnotherSession() throws Exception {
+        final GameSession otherSession = createService.createSession("carol");
+        mockMvc.perform(post("/game-sessions/" + otherSession.id() + "/puzzles/chest/answer")
+                        .with(user("alice")).with(csrf()).param("answer", "483920"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void participantCannotWriteExitUnlockOrPuzzleProgressThroughSharedStateApi() throws Exception {
+        final List<SharedStateUpdate> stream = new ArrayList<>();
+        channel.subscribe(session.id(), stream::add);
+
+        mockMvc.perform(post(statePath(session.id())).with(user("alice")).with(csrf())
+                        .param("key", "game.exitUnlocked").param("value", "true"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(statePath(session.id())).with(user("alice")).with(csrf())
+                        .param("key", "progress.puzzles.chest").param("value", "true"))
+                .andExpect(status().isBadRequest());
+
+        assertTrue(stream.isEmpty());
+    }
+
+    @Test
     void nonParticipantIsForbiddenAndNothingIsBroadcast() throws Exception {
         final List<SharedStateUpdate> stream = new ArrayList<>();
         channel.subscribe(session.id(), stream::add);
