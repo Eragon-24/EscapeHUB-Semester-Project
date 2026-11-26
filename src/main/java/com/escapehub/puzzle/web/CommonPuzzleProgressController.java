@@ -4,7 +4,7 @@ import com.escapehub.puzzle.application.CommonPuzzleProgressService;
 import com.escapehub.puzzle.domain.CommonPuzzleProgressView;
 import java.security.Principal;
 import java.util.Map;
-import java.util.NoSuchElementException;
+import com.escapehub.gameplay.application.GameSessionNotFoundException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +29,7 @@ public class CommonPuzzleProgressController {
         try {
             final CommonPuzzleProgressView progress = service.getCommonProgress(sessionId, principal.getName());
             return ResponseEntity.ok(progress);
-        } catch (final NoSuchElementException exception) {
+        } catch (final GameSessionNotFoundException exception) {
             return error(HttpStatus.NOT_FOUND, exception.getMessage());
         } catch (final SecurityException exception) {
             return error(HttpStatus.FORBIDDEN, exception.getMessage());
