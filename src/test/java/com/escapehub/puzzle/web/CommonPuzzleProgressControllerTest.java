@@ -53,17 +53,26 @@ class CommonPuzzleProgressControllerTest {
     }
 
     @Test
-    void mapsForbiddenNotFoundAndInactiveSessionErrors() {
+    void mapsForbiddenError() {
         when(service.getCommonProgress(sessionId, "alice"))
                 .thenThrow(new SecurityException("forbidden"));
-        assertEquals(HttpStatus.FORBIDDEN, controller.getProgress(sessionId, alice).getStatusCode());
 
+        assertEquals(HttpStatus.FORBIDDEN, controller.getProgress(sessionId, alice).getStatusCode());
+    }
+
+    @Test
+    void mapsNotFoundError() {
         when(service.getCommonProgress(sessionId, "alice"))
                 .thenThrow(new NoSuchElementException("missing"));
-        assertEquals(HttpStatus.NOT_FOUND, controller.getProgress(sessionId, alice).getStatusCode());
 
+        assertEquals(HttpStatus.NOT_FOUND, controller.getProgress(sessionId, alice).getStatusCode());
+    }
+
+    @Test
+    void mapsInactiveSessionError() {
         when(service.getCommonProgress(sessionId, "alice"))
                 .thenThrow(new IllegalStateException("inactive"));
+
         assertEquals(HttpStatus.CONFLICT, controller.getProgress(sessionId, alice).getStatusCode());
     }
 }
