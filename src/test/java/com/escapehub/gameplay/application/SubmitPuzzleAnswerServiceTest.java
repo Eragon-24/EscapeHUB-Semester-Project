@@ -59,7 +59,9 @@ class SubmitPuzzleAnswerServiceTest {
         games = new InMemoryGameRepository();
         channel = new InMemorySessionUpdateChannel();
         gameStates = new GameStateService(sessions, participants, games, channel, clock);
-        sharedState = new SharedStateService(sessions, participants, gameStates, List.of());
+        sharedState = new SharedStateService(
+                sessions, participants, gameStates, List.of(),
+                new RoomItemCatalog(List.of("lab-notebook")));
         service = new SubmitPuzzleAnswerService(sessions, sharedState, gameStates, new InMemoryPuzzleCatalog());
         session = new CreateGameSessionService(sessions).createSession("alice");
         new JoinGameSessionService(sessions, participants).joinSession(session.joinCode(), "bob");
@@ -250,7 +252,9 @@ class SubmitPuzzleAnswerServiceTest {
         final GameStateService persistentStates =
                 new GameStateService(sessions, participants, database, channel, clock);
         final SubmitPuzzleAnswerService persistent = new SubmitPuzzleAnswerService(sessions,
-                new SharedStateService(sessions, participants, persistentStates, List.of()),
+                new SharedStateService(
+                        sessions, participants, persistentStates, List.of(),
+                        new RoomItemCatalog(List.of("lab-notebook"))),
                 persistentStates, new InMemoryPuzzleCatalog());
 
         assertEquals(Status.ACCEPTED, persistent.submit(session.id(), "alice", "chest", CORRECT).status());
