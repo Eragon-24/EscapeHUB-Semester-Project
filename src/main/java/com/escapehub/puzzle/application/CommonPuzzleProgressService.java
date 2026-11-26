@@ -1,6 +1,7 @@
 package com.escapehub.puzzle.application;
 
 import com.escapehub.gameplay.application.GameRepository;
+import com.escapehub.gameplay.application.GameSessionNotFoundException;
 import com.escapehub.gameplay.application.GameSessionRepository;
 import com.escapehub.gameplay.application.SessionParticipantsRepository;
 import com.escapehub.gameplay.domain.Game;
@@ -12,7 +13,6 @@ import com.escapehub.puzzle.domain.PuzzleDefinition;
 import com.escapehub.puzzle.domain.PuzzleProgressItem;
 import com.escapehub.puzzle.domain.PuzzleStatus;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -35,7 +35,7 @@ public class CommonPuzzleProgressService {
 
     public CommonPuzzleProgressView getCommonProgress(final UUID sessionId, final String username) {
         final GameSession session = sessions.findById(sessionId)
-                .orElseThrow(() -> new NoSuchElementException("Η συνεδρία δεν βρέθηκε."));
+                .orElseThrow(() -> new GameSessionNotFoundException("Η συνεδρία δεν βρέθηκε."));
         requireActiveParticipant(session, username);
 
         final Optional<Game> game = games.findBySessionId(sessionId);
