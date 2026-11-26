@@ -7,6 +7,7 @@ import com.escapehub.gameplay.domain.GameStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -100,6 +101,9 @@ public class PostgresGameRepository implements GameRepository {
                             Game.INITIAL_ROOM_ID,
                             GameStatus.valueOf(status),
                             Map.of(),
+                            Set.of(),
+                            Set.of(),
+                            false,
                             rs.getLong("version")
                     );
                 },
