@@ -23,7 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("postgres")
-@EnableIfEnvironmentVariable(named = "DB_URL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "DB_URL", matches = ".+")
 class PostgresGameRepositoryTest {
 
     @Autowired
