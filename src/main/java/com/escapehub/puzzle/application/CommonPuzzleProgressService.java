@@ -46,7 +46,7 @@ public class CommonPuzzleProgressService {
                     final boolean solved = snapshot.completedPuzzleIds().contains(puzzle.id());
                     return new PuzzleProgressItem(
                             puzzle.id(),
-                            puzzleTitle(puzzle.id()),
+                            puzzle.title(),
                             puzzle.prompt(),
                             solved ? PuzzleStatus.SOLVED : PuzzleStatus.UNSOLVED,
                             solved);
@@ -73,12 +73,5 @@ public class CommonPuzzleProgressService {
         if (tracking.isPresent() && !tracking.get().isActive()) {
             throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
         }
-    }
-
-    private String puzzleTitle(final String puzzleId) {
-        return switch (puzzleId) {
-            case "chest" -> "Σεντούκι";
-            default -> puzzleId;
-        };
     }
 }
