@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.escapehub.gameplay.application.CreateGameSessionService;
@@ -52,7 +53,7 @@ class CommonPuzzleProgressSecurityIntegrationTest {
     void anonymousRequestIsRedirectedToLoginBySpringSecurity() throws Exception {
         mockMvc.perform(get(progressPath(session.id())))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(status().redirectedUrl("/login"));
+                .andExpect(redirectedUrl("/login"));
     }
 
     @Test
