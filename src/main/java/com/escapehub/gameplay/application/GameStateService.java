@@ -80,6 +80,25 @@ public class GameStateService {
         return mutateAttribute(joinCode, username, key, value).update();
     }
 
+    /**
+     * US-022: sets an attribute only if it has no value yet, then persists and publishes it. The check and the
+     * change happen as one step (all mutations go through the synchronized methods of this service), so of several
+     * simultaneous calls exactly one succeeds. Used for effects that must happen only once.
+     *
+     * @param joinCode session join code
+     * @param username authenticated participant
+     * @param key attribute name
+     * @param value attribute value
+     * @return the published event, or empty if the attribute already existed (nothing changed or was published)
+     */
+    public synchronized Optional<SharedStateUpdate> setAttributeIfAbsent(
+            final String joinCode, final String username, final String key, final String value) {
+        if (requireGame(joinCode, username).snapshot().attributes().containsKey(key)) {
+            return Optional.empty();
+        }
+        return Optional.of(mutateAttribute(joinCode, username, key, value).update());
+    }
+
     private MutationResult mutateAttribute(
             final String joinCode, final String username, final String key, final String value) {
         final Game game = requireGame(joinCode, username);

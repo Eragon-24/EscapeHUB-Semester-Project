@@ -279,4 +279,15 @@ class SharedStateServiceTest {
             assertEquals(i + 1, received.get(i).version());
         }
     }
+
+    @Test
+    void clientCannotWritePuzzleProgress() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "puzzle.chest", "solved"));
+
+        assertTrue(received.isEmpty());
+        assertTrue(service.snapshot(session.id(), "alice").attributes().isEmpty());
+    }
 }
