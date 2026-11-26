@@ -77,6 +77,9 @@
                      th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
                     <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
                 </div>
+                <p th:if="${activeSessionCode != null}">
+                    <a th:href="@{/game-sessions/{code}/journal/view(code=${activeSessionCode})}">Άνοιγμα κοινού ημερολογίου →</a>
+                </p>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
@@ -108,20 +111,14 @@
                 <p id="exit-status" class="muted-message" role="status" aria-live="polite">
                     Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
                 </p>
-                <form id="chest-puzzle-form">
-                    <label for="chest-answer">Κωδικός σεντουκιού:</label>
-                    <input id="chest-answer"
-                           name="answer"
-                           type="text"
-                           inputmode="numeric"
-                           pattern="[0-9]{6}"
-                           maxlength="6"
-                           autocomplete="off"
-                           required>
-                    <button type="submit">Υποβολή κωδικού</button>
-                </form>
-                <p id="puzzle-feedback" class="muted-message" role="status" aria-live="polite"></p>
                 <ul id="shared-state-list"></ul>
+            </section>
+
+            <section class="room-card" id="puzzle-card"
+                     th:if="${activeSessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                <h2>Γρίφοι (US-022)</h2>
+                <div id="puzzle-list"></div>
             </section>
 
             <a class="back-link" th:href="@{/}">← Επιστροφή στην Αρχική</a>
@@ -147,6 +144,7 @@
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
+<script th:src="@{/js/puzzle-submit.js}" defer></script>
 <script th:src="@{/js/nearby-object-inspection.js}" defer></script>
 </body>
 </html>

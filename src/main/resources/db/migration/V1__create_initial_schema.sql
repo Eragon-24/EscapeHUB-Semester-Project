@@ -107,3 +107,4 @@ CREATE INDEX idx_connection_history_user
 
 CREATE INDEX idx_game_session_creator
     ON game_session(creator_user_id);
+

@@ -85,10 +85,7 @@ class SharedStateControllerTest {
         mockMvc.perform(post("/game-sessions/" + session.id() + "/puzzles/chest/answer")
                         .with(user("alice")).with(csrf()).param("answer", "483920"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.correct").value(true))
-                .andExpect(jsonPath("$.gameState.exitUnlocked").value(true))
-                .andExpect(jsonPath("$.gameState.completedPuzzleIds[0]").value("chest"))
-                .andExpect(jsonPath("$.gameState.collectedItems[0]").value("LAB_KEY"));
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
 
         assertEquals(List.of(
                 "progress.puzzles.chest",
@@ -101,8 +98,7 @@ class SharedStateControllerTest {
         mockMvc.perform(post("/game-sessions/" + session.id() + "/puzzles/chest/answer")
                         .with(user("bob")).with(csrf()).param("answer", "000000"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.correct").value(false))
-                .andExpect(jsonPath("$.gameState.exitUnlocked").value(false));
+                .andExpect(jsonPath("$.status").value("REJECTED"));
     }
 
     @Test

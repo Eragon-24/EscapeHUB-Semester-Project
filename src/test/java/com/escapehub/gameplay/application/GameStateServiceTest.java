@@ -141,24 +141,19 @@ class GameStateServiceTest {
     }
 
     @Test
-    void exitUnlocksOnlyAfterValidPuzzleAnswerAndPublishesOneTimeProgress() {
+    void completingThePuzzleUnlocksTheExitAndPublishesOneTimeProgress() {
         final GameSession session = createService.createSession("alice");
         gameService.enterGame(session.joinCode(), "alice");
         final List<SharedStateUpdate> received = new ArrayList<>();
         updateChannel.subscribe(session.id(), received::add);
 
-        final var rejected = gameService.submitPuzzleAnswer(
-                session.joinCode(), "alice", "chest", "000000");
-        assertFalse(rejected.correct());
-        assertFalse(rejected.gameState().exitUnlocked());
-        assertTrue(received.isEmpty());
+        final GameState solved = gameService
+                .completePuzzle(session.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY))
+                .orElseThrow();
 
-        final var solved = gameService.submitPuzzleAnswer(
-                session.joinCode(), "alice", "chest", "483920");
-        assertTrue(solved.correct());
-        assertTrue(solved.gameState().exitUnlocked());
-        assertEquals(java.util.Set.of("chest"), solved.gameState().completedPuzzleIds());
-        assertEquals(java.util.Set.of(ItemType.LAB_KEY), solved.gameState().collectedItems());
+        assertTrue(solved.exitUnlocked());
+        assertEquals(java.util.Set.of("chest"), solved.completedPuzzleIds());
+        assertEquals(java.util.Set.of(ItemType.LAB_KEY), solved.collectedItems());
         assertEquals(List.of(
                 "progress.puzzles.chest",
                 "progress.items.LAB_KEY",
@@ -167,27 +162,35 @@ class GameStateServiceTest {
 
         joinService.joinSession(session.joinCode(), "bob");
         assertTrue(gameService.enterGame(session.joinCode(), "bob").exitUnlocked());
-
-        final var repeated = gameService.submitPuzzleAnswer(
-                session.joinCode(), "alice", "chest", "483920");
-        assertTrue(repeated.correct());
-        assertEquals(3, repeated.gameState().version());
+        assertTrue(gameService
+                .completePuzzle(session.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY))
+                .isEmpty());
+        assertEquals(3, gameService.enterGame(session.joinCode(), "alice").version());
         assertEquals(3, received.size());
     }
 
     @Test
-    void puzzleProgressIsIsolatedToTheSessionAndRequiresAValidPuzzleId() {
+    void completingAPuzzleWithoutTheExitRequirementsKeepsTheExitLocked() {
+        final GameSession session = createService.createSession("alice");
+        gameService.enterGame(session.joinCode(), "alice");
+
+        final GameState state = gameService
+                .completePuzzle(session.joinCode(), "alice", "other", java.util.Set.of())
+                .orElseThrow();
+
+        assertFalse(state.exitUnlocked());
+    }
+
+    @Test
+    void puzzleProgressIsIsolatedToTheSession() {
         final GameSession first = createService.createSession("alice");
         final GameSession second = createService.createSession("carol");
         gameService.enterGame(first.joinCode(), "alice");
         gameService.enterGame(second.joinCode(), "carol");
 
-        assertThrows(IllegalArgumentException.class,
-                () -> gameService.submitPuzzleAnswer(first.joinCode(), "alice", "unknown", "483920"));
-        gameService.submitPuzzleAnswer(first.joinCode(), "alice", "chest", "483920");
+        gameService.completePuzzle(first.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY));
 
         assertTrue(gameService.enterGame(first.joinCode(), "alice").exitUnlocked());
         assertFalse(gameService.enterGame(second.joinCode(), "carol").exitUnlocked());
     }
-
 }

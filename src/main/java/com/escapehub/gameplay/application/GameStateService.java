@@ -1,16 +1,13 @@
 package com.escapehub.gameplay.application;
 
+import com.escapehub.gameplay.domain.ExitAccessService;
 import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
-import com.escapehub.gameplay.domain.ExitAccessService;
 import com.escapehub.gameplay.domain.ItemType;
-import com.escapehub.gameplay.domain.PuzzleSubmissionResult;
 import com.escapehub.gameplay.domain.RoomExit;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
-import com.escapehub.puzzle.domain.AnswerResult;
-import com.escapehub.puzzle.domain.ChestPuzzle;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,13 +22,11 @@ public class GameStateService {
 
     private static final String CURRENT_ROOM_KEY = "game.currentRoomId";
     private static final String EXIT_UNLOCKED_KEY = "game.exitUnlocked";
-    private static final String CHEST_PUZZLE_ID = "chest";
-    private static final String CHEST_CODE = "483920";
     private static final RoomExit LABORATORY_EXIT = new RoomExit(
             "LAB_EXIT",
             "STORAGE_ROOM",
             Set.of(ItemType.LAB_KEY),
-            Set.of(CHEST_PUZZLE_ID));
+            Set.of("chest"));
 
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
@@ -99,47 +94,38 @@ public class GameStateService {
     }
 
     /**
-     * Validates a puzzle answer and records resulting progress in this session's shared game.
+     * US-022/US-024: records a puzzle that the server has already validated as solved, grants its reward items and
+     * unlocks the exit when the exit's requirements are met. The check and all changes happen as one step (all
+     * mutations go through the synchronized methods of this service), so of several simultaneous calls exactly one
+     * succeeds. The new progress is persisted first and then published to the session.
      *
      * @param joinCode session join code
-     * @param username authenticated participant
-     * @param puzzleId puzzle identifier
-     * @param answer submitted answer
-     * @return validation feedback and the resulting authoritative game state
+     * @param username participant whose validated answer solved the puzzle
+     * @param puzzleId the solved puzzle
+     * @param rewards items the team receives for solving it
+     * @return the new game state, or empty if the puzzle was already completed (nothing changed or was published)
      */
-    public synchronized PuzzleSubmissionResult submitPuzzleAnswer(
+    public synchronized Optional<GameState> completePuzzle(
             final String joinCode,
             final String username,
             final String puzzleId,
-            final String answer) {
+            final Set<ItemType> rewards) {
         final Game game = requireGame(joinCode, username);
-        if (!CHEST_PUZZLE_ID.equals(puzzleId)) {
-            throw new IllegalArgumentException("Unknown puzzle.");
-        }
-
         synchronized (game) {
-            if (game.snapshot().completedPuzzleIds().contains(CHEST_PUZZLE_ID)) {
-                return new PuzzleSubmissionResult(true, AnswerResult.SUCCESS_MESSAGE, game.snapshot());
+            if (!game.completePuzzle(puzzleId)) {
+                return Optional.empty();
             }
-
-            final AnswerResult result = new ChestPuzzle(CHEST_CODE).check(answer);
-            if (!result.correct()) {
-                return new PuzzleSubmissionResult(false, result.message(), game.snapshot());
-            }
-
             final List<PendingUpdate> updates = new ArrayList<>();
-            if (game.completePuzzle(CHEST_PUZZLE_ID)) {
-                updates.add(new PendingUpdate(
-                        game.snapshot(), "progress.puzzles." + CHEST_PUZZLE_ID, "true"));
-            }
-            if (game.collectItem(ItemType.LAB_KEY)) {
-                updates.add(new PendingUpdate(
-                        game.snapshot(), "progress.items." + ItemType.LAB_KEY.name(), "true"));
+            updates.add(new PendingUpdate(game.snapshot(), "progress.puzzles." + puzzleId, "true"));
+            for (final ItemType item : rewards) {
+                if (game.collectItem(item)) {
+                    updates.add(new PendingUpdate(game.snapshot(), "progress.items." + item.name(), "true"));
+                }
             }
             unlockExitIfRequirementsMet(game, updates);
             gameRepository.save(game);
             updates.forEach(update -> publishUpdate(update.state(), username, update.key(), update.value()));
-            return new PuzzleSubmissionResult(true, result.message(), game.snapshot());
+            return Optional.of(game.snapshot());
         }
     }
 

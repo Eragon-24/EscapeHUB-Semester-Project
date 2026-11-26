@@ -42,13 +42,13 @@ The branch provides a browser-based room view and the first game-session creatio
 - `GET /multiplayer-room`: browser room layout for **US-014**.
 - `POST /game-sessions`: creates a session for the authenticated user and displays its six-character join code (**US-011**).
 - The **US-024** exit unlock is based on server-validated puzzle completion and collected items in the session's shared game state.
-- `JpaGameRepository` persists authoritative game state through the configured datasource. Flyway initializes the state schema for both local H2 and PostgreSQL profiles.
-- Session metadata and participant membership still use in-memory adapters and are lost when the server restarts.
+- `PostgresGameRepository` (profile `postgres`) persists the game state, including solved puzzles, collected items and the exit state (migration `V4`). The default `local` profile keeps it in memory.
+- With the default `local` profile all data is in memory and is lost when the server restarts.
 - The existing `GET /room` page and its V0.1 notebook interaction remain available; it links to the new room view.
 
 Session participants share one authoritative game state. Puzzle answers are validated by the server, and the laboratory exit unlocks for the session after the chest puzzle is solved and its key is collected. The exit state is included in session snapshots and broadcast to connected participants over Server-Sent Events. Clients cannot write puzzle progress or the exit-unlocked state through the generic shared-state endpoint.
 
-Gameplay state is stored in the configured database. The default local H2 database is in-memory and is cleared when the server restarts; PostgreSQL storage persists across restarts. Session metadata and participant membership currently remain in memory, so a server restart still ends active sessions. The room layout can be opened over a trusted local network when the local profile binds to `0.0.0.0:8080`; do not configure router port forwarding.
+With the default `local` profile gameplay state is in memory and is cleared when the server restarts; with the `postgres` profile it persists across restarts. The room layout can be opened over a trusted local network when the local profile binds to `0.0.0.0:8080`; do not configure router port forwarding.
 
 Session creation requires an authenticated principal. The UI exposes the create-session action after the authentication work (US-007/US-008) is integrated.
 
@@ -91,7 +91,7 @@ docker compose down -v
 - Original V0.1 room: `GET /room`
 - Browser room view: `GET /multiplayer-room`
 - Create game session: `POST /game-sessions`
-- Submit chest answer: `POST /game-sessions/{sessionId}/puzzles/chest/answer`
+- Submit a puzzle answer: `POST /game-sessions/{sessionId}/puzzles/{puzzleId}/answer`
 - Subscribe to shared session updates: `GET /game-sessions/{sessionId}/events`
 - Basic API check: `GET /api/v1/health`
 - Spring Boot health: `GET /actuator/health`
@@ -136,7 +136,7 @@ The HTML report is written under `target/pit-reports/`. Mutation testing is inte
 ## Important implementation notes
 
 - The security configuration is intentionally permissive in the initial scaffold. It is not production-ready. Implement and test authentication and authorization before adding real user operations.
-- The Flyway schema currently stores shared game state only. Add migrations for session metadata and participants after those domain relationships are approved.
+- Database changes are added as new Flyway migrations in `src/main/resources/db/migration`; never edit a migration that has already been applied.
 - Do not put API keys, passwords or `.env` files in Git.
 - Keep mission definitions data-driven so another small mission can be added without copying core domain logic.
 - Automated tests must use mocks/stubs/fixtures rather than depending on live public APIs.

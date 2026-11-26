@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="el" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EscapeHub - Κοινό Ημερολόγιο</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <header>
+        <p><a th:href="@{/multiplayer-room}">← Επιστροφή στο δωμάτιο</a></p>
+        <h1 id="journal-title">Κοινό Ημερολόγιο Ενδείξεων</h1>
+        <p>Συνεδρία: <code th:text="${joinCode}">ABC234</code></p>
+    </header>
+
+    <section aria-labelledby="journal-title">
+        <label for="journal-search">Αναζήτηση (τίτλος ή περιγραφή)</label>
+        <input id="journal-search" type="search" autocomplete="off"
+               placeholder="π.χ. σημειωματάριο">
+        <p id="journal-status" role="status"></p>
+        <ul id="journal-list"></ul>
+    </section>
+</main>
+<script th:inline="javascript">
+    window.JOURNAL_ENDPOINT = /*[[@{/game-sessions/{code}/journal(code=${joinCode})}]]*/ '';
+</script>
+<script th:src="@{/js/journal.js}"></script>
+</body>
+</html>

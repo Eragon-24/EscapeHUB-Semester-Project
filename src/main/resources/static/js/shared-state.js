@@ -17,9 +17,6 @@
     var statusElement = document.getElementById('shared-state-status');
     var listElement = document.getElementById('shared-state-list');
     var exitStatusElement = document.getElementById('exit-status');
-    var puzzleForm = document.getElementById('chest-puzzle-form');
-    var puzzleAnswer = document.getElementById('chest-answer');
-    var puzzleFeedback = document.getElementById('puzzle-feedback');
     var csrfToken = metaContent('_csrf');
     var csrfHeader = metaContent('_csrf_header');
 
@@ -71,6 +68,7 @@
         window.dispatchEvent(new CustomEvent('escapehub:exit-state', {
             detail: {exitUnlocked: exitUnlocked}
         }));
+        window.dispatchEvent(new CustomEvent('escapehub:progress'));
     }
 
     function onSnapshot(event) {
@@ -152,43 +150,6 @@
                     throw new Error(body.error || 'Η αλλαγή απορρίφθηκε.');
                 }
                 return body;
-            });
-        });
-    }
-
-    if (puzzleForm) {
-        puzzleForm.addEventListener('submit', function (event) {
-            event.preventDefault();
-            if (!puzzleAnswer || !puzzleFeedback) {
-                return;
-            }
-            var headers = {'Content-Type': 'application/x-www-form-urlencoded'};
-            if (csrfToken && csrfHeader) {
-                headers[csrfHeader] = csrfToken;
-            }
-            puzzleFeedback.textContent = 'Έλεγχος απάντησης...';
-            fetch('/game-sessions/' + encodeURIComponent(sessionId)
-                + '/puzzles/chest/answer', {
-                method: 'POST',
-                headers: headers,
-                body: 'answer=' + encodeURIComponent(puzzleAnswer.value)
-            }).then(function (response) {
-                return response.json().then(function (body) {
-                    if (!response.ok) {
-                        throw new Error(body.error || 'Η απάντηση απορρίφθηκε.');
-                    }
-                    return body;
-                });
-            }).then(function (result) {
-                puzzleFeedback.textContent = result.message;
-                if (result.gameState) {
-                    onSnapshot({data: JSON.stringify(result.gameState)});
-                }
-                if (result.correct) {
-                    puzzleAnswer.value = '';
-                }
-            }).catch(function (error) {
-                puzzleFeedback.textContent = error.message;
             });
         });
     }
