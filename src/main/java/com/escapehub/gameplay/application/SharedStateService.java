@@ -24,6 +24,9 @@ public class SharedStateService {
     /** Longest allowed value. */
     public static final int MAX_VALUE_LENGTH = 1000;
 
+    /** US-022: keys with this prefix carry puzzle progress and are set only by the server, never by a client. */
+    public static final String PUZZLE_KEY_PREFIX = "puzzle.";
+
     private static final Set<String> RESERVED_KEYS = Set.of("game.currentRoomId", "game.status");
 
     private final GameSessionRepository sessions;
@@ -105,7 +108,8 @@ public class SharedStateService {
     public SharedStateUpdate applyChange(
             final UUID sessionId, final String username, final String key, final String value) {
         requireParticipant(sessionId, username);
-        if (key == null || !KEY_PATTERN.matcher(key).matches() || RESERVED_KEYS.contains(key)) {
+        if (key == null || !KEY_PATTERN.matcher(key).matches() || RESERVED_KEYS.contains(key)
+                || key.startsWith(PUZZLE_KEY_PREFIX)) {
             throw new StateChangeRejectedException("Μη έγκυρο κλειδί κατάστασης.");
         }
         if (value == null || value.length() > MAX_VALUE_LENGTH) {
