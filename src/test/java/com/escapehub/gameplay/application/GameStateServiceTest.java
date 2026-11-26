@@ -1,6 +1,7 @@
 package com.escapehub.gameplay.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,6 +10,7 @@ import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.GameStatus;
+import com.escapehub.gameplay.domain.ItemType;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import com.escapehub.gameplay.infrastructure.InMemoryGameRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionUpdateChannel;
@@ -49,6 +51,9 @@ class GameStateServiceTest {
         assertEquals(Game.INITIAL_ROOM_ID, state.currentRoomId());
         assertEquals(GameStatus.IN_PROGRESS, state.status());
         assertTrue(state.attributes().isEmpty());
+        assertTrue(state.completedPuzzleIds().isEmpty());
+        assertTrue(state.collectedItems().isEmpty());
+        assertFalse(state.exitUnlocked());
     }
 
     @Test
@@ -135,4 +140,57 @@ class GameStateServiceTest {
         assertEquals(2, received.get(1).version());
     }
 
+    @Test
+    void completingThePuzzleUnlocksTheExitAndPublishesOneTimeProgress() {
+        final GameSession session = createService.createSession("alice");
+        gameService.enterGame(session.joinCode(), "alice");
+        final List<SharedStateUpdate> received = new ArrayList<>();
+        updateChannel.subscribe(session.id(), received::add);
+
+        final GameState solved = gameService
+                .completePuzzle(session.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY))
+                .orElseThrow();
+
+        assertTrue(solved.exitUnlocked());
+        assertEquals(java.util.Set.of("chest"), solved.completedPuzzleIds());
+        assertEquals(java.util.Set.of(ItemType.LAB_KEY), solved.collectedItems());
+        assertEquals(List.of(
+                "progress.puzzles.chest",
+                "progress.items.LAB_KEY",
+                "game.exitUnlocked"), received.stream().map(SharedStateUpdate::key).toList());
+        assertEquals(List.of(1L, 2L, 3L), received.stream().map(SharedStateUpdate::version).toList());
+
+        joinService.joinSession(session.joinCode(), "bob");
+        assertTrue(gameService.enterGame(session.joinCode(), "bob").exitUnlocked());
+        assertTrue(gameService
+                .completePuzzle(session.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY))
+                .isEmpty());
+        assertEquals(3, gameService.enterGame(session.joinCode(), "alice").version());
+        assertEquals(3, received.size());
+    }
+
+    @Test
+    void completingAPuzzleWithoutTheExitRequirementsKeepsTheExitLocked() {
+        final GameSession session = createService.createSession("alice");
+        gameService.enterGame(session.joinCode(), "alice");
+
+        final GameState state = gameService
+                .completePuzzle(session.joinCode(), "alice", "other", java.util.Set.of())
+                .orElseThrow();
+
+        assertFalse(state.exitUnlocked());
+    }
+
+    @Test
+    void puzzleProgressIsIsolatedToTheSession() {
+        final GameSession first = createService.createSession("alice");
+        final GameSession second = createService.createSession("carol");
+        gameService.enterGame(first.joinCode(), "alice");
+        gameService.enterGame(second.joinCode(), "carol");
+
+        gameService.completePuzzle(first.joinCode(), "alice", "chest", java.util.Set.of(ItemType.LAB_KEY));
+
+        assertTrue(gameService.enterGame(first.joinCode(), "alice").exitUnlocked());
+        assertFalse(gameService.enterGame(second.joinCode(), "carol").exitUnlocked());
+    }
 }
