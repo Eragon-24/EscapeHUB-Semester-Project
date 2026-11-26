@@ -24,7 +24,13 @@ public class SharedStateService {
     /** Longest allowed value. */
     public static final int MAX_VALUE_LENGTH = 1000;
 
-    private static final Set<String> RESERVED_KEYS = Set.of("game.currentRoomId", "game.status");
+    /** Keys with this prefix carry puzzle progress and are published only by the server (US-022, US-024). */
+    public static final String PROGRESS_KEY_PREFIX = "progress.";
+
+    private static final Set<String> RESERVED_KEYS = Set.of(
+            "game.currentRoomId",
+            "game.status",
+            "game.exitUnlocked");
 
     private final GameSessionRepository sessions;
     private final SessionParticipantsRepository participants;
@@ -108,7 +114,8 @@ public class SharedStateService {
     public SharedStateUpdate applyChange(
             final UUID sessionId, final String username, final String key, final String value) {
         requireParticipant(sessionId, username);
-        if (key == null || !KEY_PATTERN.matcher(key).matches() || RESERVED_KEYS.contains(key)) {
+        if (key == null || !KEY_PATTERN.matcher(key).matches() || RESERVED_KEYS.contains(key)
+                || key.startsWith(PROGRESS_KEY_PREFIX)) {
             throw new StateChangeRejectedException("Μη έγκυρο κλειδί κατάστασης.");
         }
         if (value == null || value.length() > MAX_VALUE_LENGTH) {

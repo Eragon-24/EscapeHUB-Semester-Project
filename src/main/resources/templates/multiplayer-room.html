@@ -36,6 +36,12 @@
         </div>
 
         <aside class="room-sidebar">
+            <section class="room-card" id="puzzle-progress-card" hidden>
+                <h2>Κοινή Πρόοδος Γρίφων (US-023)</h2>
+                <p id="puzzle-progress-summary" class="muted-message">Φόρτωση κοινής προόδου...</p>
+                <progress id="puzzle-progress-bar" value="0" max="100" aria-label="Πρόοδος γρίφων"></progress>
+                <ul id="puzzle-progress-list"></ul>
+            </section>
             <section class="room-card">
                 <h2>Συνεδρία παιχνιδιού</h2>
                 <div class="created-session" th:if="${createdSessionCode != null}">
@@ -77,6 +83,9 @@
                      th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
                     <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
                 </div>
+                <p th:if="${activeSessionCode != null}">
+                    <a th:href="@{/game-sessions/{code}/journal/view(code=${activeSessionCode})}">Άνοιγμα κοινού ημερολογίου →</a>
+                </p>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
@@ -105,6 +114,9 @@
                      th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
+                <p id="exit-status" class="muted-message" role="status" aria-live="polite">
+                    Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
+                </p>
                 <ul id="shared-state-list"></ul>
                 <h3>Room items</h3>
                 <div class="object-interaction" th:each="itemId : ${interactiveItems}"
@@ -115,6 +127,13 @@
                 <p id="object-interaction-message" role="status" aria-live="polite"></p>
                 <h3>Shared inventory</h3>
                 <ul id="shared-inventory-list" aria-live="polite"></ul>
+            </section>
+
+            <section class="room-card" id="puzzle-card"
+                     th:if="${activeSessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                <h2>Γρίφοι (US-022)</h2>
+                <div id="puzzle-list"></div>
             </section>
 
             <a class="back-link" th:href="@{/}">← Επιστροφή στην Αρχική</a>
@@ -140,6 +159,7 @@
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
+<script th:src="@{/js/puzzle-submit.js}" defer></script>
 <script th:src="@{/js/nearby-object-inspection.js}" defer></script>
 </body>
 </html>

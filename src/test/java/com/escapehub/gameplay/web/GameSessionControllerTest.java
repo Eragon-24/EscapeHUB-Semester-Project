@@ -37,7 +37,8 @@ class GameSessionControllerTest {
         );
         final RedirectAttributes attributes = new RedirectAttributesModelMap();
         final GameState state = new GameState(
-                session.id(), Game.INITIAL_ROOM_ID, GameStatus.IN_PROGRESS, Map.of(), 0);
+                session.id(), Game.INITIAL_ROOM_ID, GameStatus.IN_PROGRESS, Map.of(),
+                java.util.Set.of(), java.util.Set.of(), false, 0);
         when(service.createSession("playerOne")).thenReturn(session);
         when(gameStateService.enterGame("ABC234", "playerOne")).thenReturn(state);
 

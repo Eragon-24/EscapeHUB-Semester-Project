@@ -16,6 +16,7 @@
     var playerRadius = 18;
     var moveStep = 12;
     var localPlayer = { x: 480, y: 490 };
+    var exitUnlocked = false;
 
     window.escapeHubGetPlayerPosition = function () {
         return {
@@ -187,20 +188,20 @@
     }
 
     function drawExit() {
-        context.fillStyle = '#584136';
+        context.fillStyle = exitUnlocked ? '#416447' : '#584136';
         context.fillRect(430, 92, 100, 50);
-        context.strokeStyle = '#b1956a';
+        context.strokeStyle = exitUnlocked ? '#9bd19d' : '#b1956a';
         context.lineWidth = 3;
         context.strokeRect(430, 92, 100, 50);
 
-        context.fillStyle = '#e0be62';
+        context.fillStyle = exitUnlocked ? '#a8e6a8' : '#e0be62';
         context.beginPath();
         context.arc(514, 118, 4, 0, Math.PI * 2);
         context.fill();
 
         context.fillStyle = '#ebe6d6';
         context.font = 'bold 12px sans-serif';
-        context.fillText('ΕΞΟΔΟΣ', 458, 78);
+        context.fillText(exitUnlocked ? 'ΕΞΟΔΟΣ - ΞΕΚΛΕΙΔΩΤΗ' : 'ΕΞΟΔΟΣ - ΚΛΕΙΔΩΜΕΝΗ', 405, 78);
     }
 
     function drawPlayerAvatar(x, y, label, fillColor, strokeColor) {
@@ -305,7 +306,85 @@
             });
     }
 
+
+    var puzzleProgressCard = document.getElementById('puzzle-progress-card');
+
+    function setPuzzleProgressMessage(message) {
+        var summary = document.getElementById('puzzle-progress-summary');
+        if (summary) summary.textContent = message;
+    }
+
+    function clearPuzzleProgress() {
+        var bar = document.getElementById('puzzle-progress-bar');
+        var list = document.getElementById('puzzle-progress-list');
+        if (bar) bar.value = 0;
+        if (list) list.textContent = '';
+    }
+
+    function renderPuzzleProgress(progress) {
+        var summary = document.getElementById('puzzle-progress-summary');
+        var bar = document.getElementById('puzzle-progress-bar');
+        var list = document.getElementById('puzzle-progress-list');
+        if (!summary || !bar || !list || !progress) return;
+        summary.textContent = 'Λυμένοι γρίφοι: ' + progress.solvedCount + '/'
+            + progress.totalPuzzles + ' (' + progress.completionPercentage + '%)';
+        bar.value = progress.completionPercentage;
+        list.textContent = '';
+        progress.puzzles.forEach(function (puzzle) {
+            var item = document.createElement('li');
+            var title = document.createElement('strong');
+            title.textContent = puzzle.title + ' — ' + (puzzle.solved ? 'Λυμένος' : 'Εκκρεμεί');
+            item.appendChild(title);
+            if (puzzle.description) {
+                var description = document.createElement('p');
+                description.textContent = puzzle.description;
+                item.appendChild(description);
+            }
+            list.appendChild(item);
+        });
+    }
+
+    function fetchCommonPuzzleProgress() {
+        if (!sessionId) return;
+        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/puzzle-progress', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    clearPuzzleProgress();
+                    if (response.status === 401) {
+                        setPuzzleProgressMessage('Συνδέσου για να δεις την κοινή πρόοδο.');
+                    } else if (response.status === 403) {
+                        setPuzzleProgressMessage('Δεν έχεις πρόσβαση στην πρόοδο αυτής της συνεδρίας.');
+                    } else if (response.status === 404) {
+                        setPuzzleProgressMessage('Η συνεδρία δεν βρέθηκε.');
+                    } else if (response.status === 409) {
+                        setPuzzleProgressMessage('Η συνεδρία δεν είναι πλέον ενεργή.');
+                    } else {
+                        setPuzzleProgressMessage('Δεν ήταν δυνατή η φόρτωση της κοινής προόδου.');
+                    }
+                    return null;
+                }
+                return response.json();
+            })
+            .then(function (progress) {
+                if (progress) renderPuzzleProgress(progress);
+            })
+            .catch(function () {
+                clearPuzzleProgress();
+                setPuzzleProgressMessage('Προσωρινό σφάλμα σύνδεσης. Θα γίνει νέα προσπάθεια.');
+            });
+    }
+
     if (sessionId) {
+        if (puzzleProgressCard) puzzleProgressCard.hidden = false;
+        fetchCommonPuzzleProgress();
+        window.setInterval(fetchCommonPuzzleProgress, 3000);
+        window.addEventListener('escapehub:exit-state', function (event) {
+            exitUnlocked = event.detail.exitUnlocked === true;
+            render();
+        });
         window.addEventListener('keydown', function (event) {
             if (event.target && (event.target.tagName === 'INPUT'
                 || event.target.tagName === 'TEXTAREA')) {

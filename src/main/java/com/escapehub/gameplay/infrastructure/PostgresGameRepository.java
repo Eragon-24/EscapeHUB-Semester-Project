@@ -4,10 +4,13 @@ import com.escapehub.gameplay.application.GameRepository;
 import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.GameStatus;
+import com.escapehub.gameplay.domain.ItemType;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -45,6 +48,20 @@ public class PostgresGameRepository implements GameRepository {
                         "INSERT INTO game_state (session_id, status, version) VALUES (?, ?, ?)",
                         snapshot.sessionId(), snapshot.status().name(), snapshot.version());
             }
+            jdbcTemplate.update(
+                    """
+                            INSERT INTO game_state (session_id, status, version, exit_unlocked)
+                            VALUES (?, ?, ?, ?)
+                            ON CONFLICT (session_id)
+                            DO UPDATE SET status = EXCLUDED.status,
+                                          version = EXCLUDED.version,
+                                          exit_unlocked = EXCLUDED.exit_unlocked
+                            """,
+                    snapshot.sessionId(),
+                    snapshot.status().name(),
+                    snapshot.version(),
+                    snapshot.exitUnlocked()
+            );
 
             jdbcTemplate.update(
                     "DELETE FROM game_attribute WHERE session_id = ?",
@@ -72,6 +89,19 @@ public class PostgresGameRepository implements GameRepository {
                         "INSERT INTO game_attribute (session_id, attribute_key, attribute_value) VALUES (?, ?, ?)",
                         snapshot.sessionId(), "game.currentRoomId", snapshot.currentRoomId());
             }
+            jdbcTemplate.update(
+                    """
+                            INSERT INTO game_attribute
+                                (session_id, attribute_key, attribute_value)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT (session_id, attribute_key)
+                            DO UPDATE SET attribute_value = EXCLUDED.attribute_value
+                            """,
+                    snapshot.sessionId(),
+                    "game.currentRoomId",
+                    snapshot.currentRoomId()
+            );
+            saveProgress(snapshot);
         });
 
         return game;
@@ -81,7 +111,7 @@ public class PostgresGameRepository implements GameRepository {
     public Optional<Game> findBySessionId(final UUID sessionId) {
         List<GameState> states = jdbcTemplate.query(
                 """
-                        SELECT status, version
+                        SELECT status, version, exit_unlocked
                         FROM game_state
                         WHERE session_id = ?
                         """,
@@ -92,6 +122,9 @@ public class PostgresGameRepository implements GameRepository {
                             Game.INITIAL_ROOM_ID,
                             GameStatus.valueOf(status),
                             Map.of(),
+                            completedPuzzles(sessionId),
+                            collectedItems(sessionId),
+                            rs.getBoolean("exit_unlocked"),
                             rs.getLong("version")
                     );
                 },
@@ -129,12 +162,48 @@ public class PostgresGameRepository implements GameRepository {
 
         attributes.remove("game.currentRoomId");
 
-        return Optional.of(Game.restore(
+        return Optional.of(Game.restore(new GameState(
                 sessionId,
                 roomId,
                 state.status(),
                 attributes,
-                state.version()
-        ));
+                state.completedPuzzleIds(),
+                state.collectedItems(),
+                state.exitUnlocked(),
+                state.version())));
+    }
+
+    private void saveProgress(final GameState snapshot) {
+        jdbcTemplate.update("DELETE FROM game_completed_puzzle WHERE session_id = ?", snapshot.sessionId());
+        for (final String puzzleId : snapshot.completedPuzzleIds()) {
+            jdbcTemplate.update(
+                    "INSERT INTO game_completed_puzzle (session_id, puzzle_id) VALUES (?, ?)",
+                    snapshot.sessionId(),
+                    puzzleId);
+        }
+        jdbcTemplate.update("DELETE FROM game_collected_item WHERE session_id = ?", snapshot.sessionId());
+        for (final ItemType item : snapshot.collectedItems()) {
+            jdbcTemplate.update(
+                    "INSERT INTO game_collected_item (session_id, item_type) VALUES (?, ?)",
+                    snapshot.sessionId(),
+                    item.name());
+        }
+    }
+
+    private Set<String> completedPuzzles(final UUID sessionId) {
+        return Set.copyOf(jdbcTemplate.queryForList(
+                "SELECT puzzle_id FROM game_completed_puzzle WHERE session_id = ?",
+                String.class,
+                sessionId));
+    }
+
+    private Set<ItemType> collectedItems(final UUID sessionId) {
+        return jdbcTemplate.queryForList(
+                        "SELECT item_type FROM game_collected_item WHERE session_id = ?",
+                        String.class,
+                        sessionId)
+                .stream()
+                .map(ItemType::valueOf)
+                .collect(Collectors.toUnmodifiableSet());
     }
 }
