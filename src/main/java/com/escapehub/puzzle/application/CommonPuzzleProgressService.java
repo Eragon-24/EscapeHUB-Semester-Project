@@ -12,7 +12,6 @@ import com.escapehub.puzzle.domain.PuzzleDefinition;
 import com.escapehub.puzzle.domain.PuzzleProgressItem;
 import com.escapehub.puzzle.domain.PuzzleStatus;
 import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
