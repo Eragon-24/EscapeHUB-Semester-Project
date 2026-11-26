@@ -314,6 +314,13 @@
         if (summary) summary.textContent = message;
     }
 
+    function clearPuzzleProgress() {
+        var bar = document.getElementById('puzzle-progress-bar');
+        var list = document.getElementById('puzzle-progress-list');
+        if (bar) bar.value = 0;
+        if (list) list.textContent = '';
+    }
+
     function renderPuzzleProgress(progress) {
         var summary = document.getElementById('puzzle-progress-summary');
         var bar = document.getElementById('puzzle-progress-bar');
@@ -345,6 +352,7 @@
         })
             .then(function (response) {
                 if (!response.ok) {
+                    clearPuzzleProgress();
                     if (response.status === 401) {
                         setPuzzleProgressMessage('Συνδέσου για να δεις την κοινή πρόοδο.');
                     } else if (response.status === 403) {
@@ -364,6 +372,7 @@
                 if (progress) renderPuzzleProgress(progress);
             })
             .catch(function () {
+                clearPuzzleProgress();
                 setPuzzleProgressMessage('Προσωρινό σφάλμα σύνδεσης. Θα γίνει νέα προσπάθεια.');
             });
     }
