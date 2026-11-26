@@ -46,7 +46,7 @@ public class CommonPuzzleProgressService {
                     final boolean solved = snapshot.completedPuzzleIds().contains(puzzle.id());
                     return new PuzzleProgressItem(
                             puzzle.id(),
-                            puzzle.id(),
+                            puzzleTitle(puzzle.id()),
                             puzzle.prompt(),
                             solved ? PuzzleStatus.SOLVED : PuzzleStatus.UNSOLVED,
                             solved);
@@ -64,14 +64,21 @@ public class CommonPuzzleProgressService {
         }
         final String clean = username.trim();
         final Optional<SessionParticipants> tracking = participants.findBySessionId(session.id());
-        if (tracking.isPresent() && !tracking.get().isActive()) {
-            throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
-        }
         final boolean creator = session.creatorUsername().equalsIgnoreCase(clean);
         final boolean player = tracking.map(value -> value.getPlayers().stream()
                 .anyMatch(name -> name.equalsIgnoreCase(clean))).orElse(false);
         if (!creator && !player) {
             throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
         }
+        if (tracking.isPresent() && !tracking.get().isActive()) {
+            throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
+        }
+    }
+
+    private String puzzleTitle(final String puzzleId) {
+        return switch (puzzleId) {
+            case "chest" -> "Σεντούκι";
+            default -> puzzleId;
+        };
     }
 }
