@@ -108,7 +108,17 @@
                      th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
+                <p id="exit-status" class="muted-message" role="status" aria-live="polite">
+                    Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
+                </p>
                 <ul id="shared-state-list"></ul>
+            </section>
+
+            <section class="room-card" id="puzzle-card"
+                     th:if="${activeSessionId != null or createdSessionId != null or joinedSessionId != null}"
+                     th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
+                <h2>Γρίφοι (US-022)</h2>
+                <div id="puzzle-list"></div>
             </section>
 
             <a class="back-link" th:href="@{/}">← Επιστροφή στην Αρχική</a>
@@ -134,6 +144,7 @@
 <script th:src="@{/js/multiplayer-room.js}" defer></script>
 <script th:src="@{/js/game-state.js}" defer></script>
 <script th:src="@{/js/shared-state.js}" defer></script>
+<script th:src="@{/js/puzzle-submit.js}" defer></script>
 <script th:src="@{/js/nearby-object-inspection.js}" defer></script>
 </body>
 </html>
