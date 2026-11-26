@@ -132,13 +132,13 @@ public class JournalService {
 
         if (participantsOpt.isPresent()) {
             final SessionParticipants participants = participantsOpt.get();
-            if (!participants.isActive()) {
-                throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
-            }
             final boolean isParticipant = participants.getPlayers().stream()
                     .anyMatch(player -> player.equalsIgnoreCase(name));
             if (!isCreator && !isParticipant) {
                 throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
+            }
+            if (!participants.isActive()) {
+                throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
             }
             return;
         }
@@ -154,3 +154,4 @@ public class JournalService {
         return candidate.trim();
     }
 }
+
