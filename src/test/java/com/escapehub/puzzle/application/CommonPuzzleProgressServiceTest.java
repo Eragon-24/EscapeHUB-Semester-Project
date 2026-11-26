@@ -13,6 +13,8 @@ import com.escapehub.gameplay.infrastructure.InMemoryGameRepository;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import com.escapehub.puzzle.domain.CommonPuzzleProgressView;
+import com.escapehub.puzzle.domain.PuzzleDefinition;
+import java.util.List;
 import com.escapehub.puzzle.domain.PuzzleStatus;
 import com.escapehub.puzzle.infrastructure.InMemoryPuzzleCatalog;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,12 +26,13 @@ class CommonPuzzleProgressServiceTest {
     private CreateGameSessionService creator;
     private JoinGameSessionService joiner;
     private CommonPuzzleProgressService service;
+    private InMemoryGameSessionRepository sessions;
     private GameSession session;
 
     @BeforeEach
     void setUp() {
         games = new InMemoryGameRepository();
-        InMemoryGameSessionRepository sessions = new InMemoryGameSessionRepository();
+        sessions = new InMemoryGameSessionRepository();
         participants = new InMemorySessionParticipantsRepository();
         creator = new CreateGameSessionService(sessions);
         joiner = new JoinGameSessionService(sessions, participants);
@@ -42,7 +45,7 @@ class CommonPuzzleProgressServiceTest {
         CommonPuzzleProgressView progress = service.getCommonProgress(session.id(), "player1");
         assertEquals(1, progress.totalPuzzles());
         assertEquals(0, progress.solvedCount());
-        assertEquals(100, progress.remainingCount() * 100 / progress.totalPuzzles());
+        assertEquals(progress.totalPuzzles(), progress.remainingCount());
         assertEquals(PuzzleStatus.UNSOLVED, progress.puzzles().get(0).status());
     }
 
@@ -59,6 +62,7 @@ class CommonPuzzleProgressServiceTest {
         assertEquals(1, progress.solvedCount());
         assertEquals(100, progress.completionPercentage());
         assertEquals("chest", progress.puzzles().get(0).puzzleId());
+        assertEquals("Σεντούκι", progress.puzzles().get(0).title());
         assertTrue(progress.puzzles().get(0).solved());
     }
 
@@ -80,5 +84,43 @@ class CommonPuzzleProgressServiceTest {
         tracking.deactivate();
         participants.save(tracking);
         assertThrows(IllegalStateException.class, () -> service.getCommonProgress(session.id(), "player2"));
+    }
+
+    @Test
+    void rejectsNonParticipantBeforeCheckingWhetherSessionIsActive() {
+        joiner.joinSession(session.joinCode(), "player2");
+        var tracking = participants.findBySessionId(session.id()).orElseThrow();
+        tracking.deactivate();
+        participants.save(tracking);
+
+        assertThrows(SecurityException.class,
+                () -> service.getCommonProgress(session.id(), "intruder"));
+    }
+
+    @Test
+    void returnsZeroPercentWhenCatalogIsEmpty() {
+        CommonPuzzleProgressService emptyCatalogService = new CommonPuzzleProgressService(
+                games,
+                sessions,
+                participants,
+                new PuzzleCatalog() {
+                    @Override
+                    public List<PuzzleDefinition> findAll() {
+                        return List.of();
+                    }
+
+                    @Override
+                    public java.util.Optional<PuzzleDefinition> findById(final String id) {
+                        return java.util.Optional.empty();
+                    }
+                });
+
+        CommonPuzzleProgressView progress =
+                emptyCatalogService.getCommonProgress(session.id(), "player1");
+
+        assertEquals(0, progress.totalPuzzles());
+        assertEquals(0, progress.solvedCount());
+        assertEquals(0, progress.remainingCount());
+        assertEquals(0, progress.completionPercentage());
     }
 }
