@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Repository;
  * εγγραφές με τα ίδια στοιχεία να μην περάσουν και οι δύο. Στη βάση θα το αναλάβουν unique constraints.
  */
 @Repository
+@Profile("local")
 public class InMemoryUserRepository implements UserRepository {
 
     private final List<User> users = new ArrayList<>();

@@ -61,9 +61,5 @@ public class LeaveGameSessionService {
 
         participants.removePlayer(participant.get());
         participantsRepository.save(participants);
-        positionsRepository.findBySessionId(session.id()).ifPresent(tracked -> {
-            tracked.removePlayer(participant.get());
-            positionsRepository.save(tracked);
-        });
     }
 }

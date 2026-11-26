@@ -58,9 +58,23 @@ class LeaveGameSessionServiceTest {
 
         leaveSessionService.leaveSession(session.joinCode().toLowerCase(), "player2");
 
-        assertEquals(Set.of("player1"), participants.getPlayers());
-        assertEquals(0, positions.getOtherPlayers("player1").size());
-        assertEquals(1, positions.getOtherPlayers("player2").size());
+        final SessionParticipants activeParticipants = participantsRepository
+                .findBySessionId(session.id())
+                .orElseThrow();
+
+        assertEquals(Set.of("player1"), activeParticipants.getPlayers());
+
+        assertEquals(
+                0,
+                positions.getOtherPlayers("player1", activeParticipants.getPlayers()).size()
+        );
+
+        assertEquals(
+                1,
+                positions.getOtherPlayers("player2", activeParticipants.getPlayers()).size()
+        );
+
+        assertTrue(positions.getPositions().containsKey("player2"));
         assertSame(game, gameRepository.findBySessionId(session.id()).orElseThrow());
         assertSame(session, sessionRepository.findById(session.id()).orElseThrow());
 
