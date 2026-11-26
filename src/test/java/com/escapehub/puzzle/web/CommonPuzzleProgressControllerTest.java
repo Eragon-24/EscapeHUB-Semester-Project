@@ -3,11 +3,11 @@ package com.escapehub.puzzle.web;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
+import com.escapehub.gameplay.application.GameSessionNotFoundException;
 import com.escapehub.puzzle.application.CommonPuzzleProgressService;
 import com.escapehub.puzzle.domain.CommonPuzzleProgressView;
 import java.security.Principal;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ class CommonPuzzleProgressControllerTest {
     @Test
     void mapsNotFoundError() {
         when(service.getCommonProgress(sessionId, "alice"))
-                .thenThrow(new NoSuchElementException("missing"));
+                .thenThrow(new GameSessionNotFoundException("missing"));
 
         assertEquals(HttpStatus.NOT_FOUND, controller.getProgress(sessionId, alice).getStatusCode());
     }
