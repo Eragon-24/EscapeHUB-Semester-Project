@@ -26,7 +26,7 @@
     };
 
     var otherPlayers = [];
-    var pollIntervalMs = 30;
+    var pollIntervalMs = 30;\n    var puzzleProgressPollMs = 3000;
     var obstacles = [
         { minX: 150, minY: 180, maxX: 420, maxY: 290 },
         { minX: 680, minY: 195, maxX: 820, maxY: 305 },
