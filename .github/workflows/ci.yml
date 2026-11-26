@@ -11,6 +11,22 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: escapehub
+          POSTGRES_USER: escapehub
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U escapehub -d escapehub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,3 +48,7 @@ jobs:
 
       - name: Build, test and run Checkstyle
         run: mvn -B verify
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/escapehub
+          DB_USERNAME: escapehub
+          DB_PASSWORD: ci-test-password

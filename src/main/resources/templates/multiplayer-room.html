@@ -77,6 +77,9 @@
                      th:attr="data-endpoint=@{/game-sessions/{code}/game(code=${activeSessionCode})}">
                     <p>Κοινή κατάσταση παιχνιδιού: <span id="game-state-text">Φόρτωση…</span></p>
                 </div>
+                <p th:if="${activeSessionCode != null}">
+                    <a th:href="@{/game-sessions/{code}/journal/view(code=${activeSessionCode})}">Άνοιγμα κοινού ημερολογίου →</a>
+                </p>
                 <p class="muted-message" th:if="${joinErrorMessage != null}" th:text="${joinErrorMessage}">
                     Μήνυμα σφάλματος.
                 </p>
