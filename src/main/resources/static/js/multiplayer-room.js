@@ -26,7 +26,7 @@
     };
 
     var otherPlayers = [];
-    var pollIntervalMs = 30;\n    var puzzleProgressPollMs = 3000;
+    var pollIntervalMs = 30;
     var obstacles = [
         { minX: 150, minY: 180, maxX: 420, maxY: 290 },
         { minX: 680, minY: 195, maxX: 820, maxY: 305 },
@@ -306,7 +306,44 @@
             });
     }
 
+
+    function renderPuzzleProgress(progress) {
+        var summary = document.getElementById('puzzle-progress-summary');
+        var bar = document.getElementById('puzzle-progress-bar');
+        var list = document.getElementById('puzzle-progress-list');
+        if (!summary || !bar || !list || !progress) return;
+        summary.textContent = 'Λυμένοι γρίφοι: ' + progress.solvedCount + '/'
+            + progress.totalPuzzles + ' (' + progress.completionPercentage + '%)';
+        bar.value = progress.completionPercentage;
+        list.textContent = '';
+        progress.puzzles.forEach(function (puzzle) {
+            var item = document.createElement('li');
+            item.textContent = puzzle.title + ' — ' + (puzzle.solved ? 'Λυμένος' : 'Εκκρεμεί');
+            list.appendChild(item);
+        });
+    }
+
+    function fetchCommonPuzzleProgress() {
+        if (!sessionId) return;
+        fetch('/api/v1/game-sessions/' + encodeURIComponent(sessionId) + '/puzzle-progress', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) return null;
+                return response.json();
+            })
+            .then(function (progress) {
+                if (progress) renderPuzzleProgress(progress);
+            })
+            .catch(function () {
+                // Keep the last known progress during temporary network failures.
+            });
+    }
+
     if (sessionId) {
+        fetchCommonPuzzleProgress();
+        window.setInterval(fetchCommonPuzzleProgress, 3000);
         window.addEventListener('escapehub:exit-state', function (event) {
             exitUnlocked = event.detail.exitUnlocked === true;
             render();
