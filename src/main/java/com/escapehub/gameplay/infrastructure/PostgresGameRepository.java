@@ -37,18 +37,14 @@ public class PostgresGameRepository implements GameRepository {
         transactionTemplate.executeWithoutResult(status -> {
             GameState snapshot = game.snapshot();
 
-            jdbcTemplate.update(
-                    """
-                            INSERT INTO game_state (session_id, status, version)
-                            VALUES (?, ?, ?)
-                            ON CONFLICT (session_id)
-                            DO UPDATE SET status = EXCLUDED.status,
-                                          version = EXCLUDED.version
-                            """,
-                    snapshot.sessionId(),
-                    snapshot.status().name(),
-                    snapshot.version()
-            );
+            final int updatedState = jdbcTemplate.update(
+                    "UPDATE game_state SET status = ?, version = ? WHERE session_id = ?",
+                    snapshot.status().name(), snapshot.version(), snapshot.sessionId());
+            if (updatedState == 0) {
+                jdbcTemplate.update(
+                        "INSERT INTO game_state (session_id, status, version) VALUES (?, ?, ?)",
+                        snapshot.sessionId(), snapshot.status().name(), snapshot.version());
+            }
 
             jdbcTemplate.update(
                     "DELETE FROM game_attribute WHERE session_id = ?",
@@ -68,18 +64,14 @@ public class PostgresGameRepository implements GameRepository {
                 );
             }
 
-            jdbcTemplate.update(
-                    """
-                            INSERT INTO game_attribute
-                                (session_id, attribute_key, attribute_value)
-                            VALUES (?, ?, ?)
-                            ON CONFLICT (session_id, attribute_key)
-                            DO UPDATE SET attribute_value = EXCLUDED.attribute_value
-                            """,
-                    snapshot.sessionId(),
-                    "game.currentRoomId",
-                    snapshot.currentRoomId()
-            );
+            final int updatedRoom = jdbcTemplate.update(
+                    "UPDATE game_attribute SET attribute_value = ? WHERE session_id = ? AND attribute_key = ?",
+                    snapshot.currentRoomId(), snapshot.sessionId(), "game.currentRoomId");
+            if (updatedRoom == 0) {
+                jdbcTemplate.update(
+                        "INSERT INTO game_attribute (session_id, attribute_key, attribute_value) VALUES (?, ?, ?)",
+                        snapshot.sessionId(), "game.currentRoomId", snapshot.currentRoomId());
+            }
         });
 
         return game;
