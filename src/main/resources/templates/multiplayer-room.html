@@ -108,6 +108,9 @@
                      th:data-session-id="${activeSessionId != null ? activeSessionId : (createdSessionId != null ? createdSessionId : joinedSessionId)}">
                 <h2>Κοινή κατάσταση (US-015)</h2>
                 <p id="shared-state-status" class="muted-message">Συγχρονισμός: σύνδεση...</p>
+                <p id="exit-status" class="muted-message" role="status" aria-live="polite">
+                    Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
+                </p>
                 <ul id="shared-state-list"></ul>
             </section>
 

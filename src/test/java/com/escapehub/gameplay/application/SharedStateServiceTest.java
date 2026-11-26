@@ -167,6 +167,10 @@ class SharedStateServiceTest {
                 () -> service.applyChange(session.id(), "alice", "bad key!", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "game.currentRoomId", "vault"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "game.exitUnlocked", "true"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "progress.puzzles.chest", "true"));
         assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "k", null));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "k", tooLong));
@@ -285,7 +289,7 @@ class SharedStateServiceTest {
         final List<SharedStateUpdate> received = listenTo(session.id());
 
         assertThrows(StateChangeRejectedException.class,
-                () -> service.applyChange(session.id(), "alice", "puzzle.chest", "solved"));
+                () -> service.applyChange(session.id(), "alice", "progress.items.LAB_KEY", "true"));
 
         assertTrue(received.isEmpty());
         assertTrue(service.snapshot(session.id(), "alice").attributes().isEmpty());

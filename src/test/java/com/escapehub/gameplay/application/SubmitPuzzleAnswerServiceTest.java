@@ -9,6 +9,7 @@ import com.escapehub.gameplay.application.PuzzleSubmissionResult.Status;
 import com.escapehub.gameplay.domain.Game;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.ItemType;
 import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -65,7 +67,7 @@ class SubmitPuzzleAnswerServiceTest {
 
     private boolean isSolved(final UUID sessionId, final String participant) {
         return games.findBySessionId(sessionId)
-                .map(game -> game.snapshot().attributes().containsKey("puzzle.chest")).orElse(false);
+                .map(game -> game.snapshot().completedPuzzleIds().contains("chest")).orElse(false);
     }
 
     private List<SharedStateUpdate> listenTo(final UUID sessionId) {
@@ -89,11 +91,29 @@ class SubmitPuzzleAnswerServiceTest {
 
         service.submit(session.id(), "alice", "chest", CORRECT);
 
-        assertEquals(1, bobsView.size());
-        assertEquals("puzzle.chest", bobsView.get(0).key());
-        assertEquals("solved", bobsView.get(0).value());
+        assertEquals(List.of("progress.puzzles.chest", "progress.items.LAB_KEY", "game.exitUnlocked"),
+                bobsView.stream().map(SharedStateUpdate::key).toList());
+        assertEquals(List.of(1L, 2L, 3L), bobsView.stream().map(SharedStateUpdate::version).toList());
         assertEquals("alice", bobsView.get(0).author());
-        assertEquals("solved", sharedState.snapshot(session.id(), "bob").attributes().get("puzzle.chest"));
+    }
+
+    @Test
+    void correctAnswerGrantsTheKeyAndUnlocksTheExitForTheWholeSession() {
+        service.submit(session.id(), "alice", "chest", CORRECT);
+
+        final GameState seenByBob = sharedState.snapshot(session.id(), "bob");
+        assertEquals(Set.of("chest"), seenByBob.completedPuzzleIds());
+        assertEquals(Set.of(ItemType.LAB_KEY), seenByBob.collectedItems());
+        assertTrue(seenByBob.exitUnlocked());
+    }
+
+    @Test
+    void wrongAnswerLeavesTheExitLocked() {
+        service.submit(session.id(), "alice", "chest", "000000");
+
+        final GameState state = sharedState.snapshot(session.id(), "alice");
+        assertFalse(state.exitUnlocked());
+        assertTrue(state.collectedItems().isEmpty());
     }
 
     @Test
@@ -137,8 +157,8 @@ class SubmitPuzzleAnswerServiceTest {
         final PuzzleSubmissionResult again = service.submit(session.id(), "bob", "chest", CORRECT);
 
         assertEquals(Status.ALREADY_SOLVED, again.status());
-        assertEquals(1, received.size());
-        assertEquals(1, sharedState.snapshot(session.id(), "alice").version());
+        assertEquals(3, received.size());
+        assertEquals(3, sharedState.snapshot(session.id(), "alice").version());
         assertEquals("alice", received.get(0).author());
     }
 
@@ -175,7 +195,7 @@ class SubmitPuzzleAnswerServiceTest {
 
         assertThrows(IllegalStateException.class, () -> service.submit(session.id(), "alice", "chest", CORRECT));
         final boolean solvedInGame = games.findBySessionId(session.id())
-                .map(game -> game.snapshot().attributes().containsKey("puzzle.chest")).orElse(false);
+                .map(game -> game.snapshot().completedPuzzleIds().contains("chest")).orElse(false);
         assertFalse(solvedInGame);
     }
 
@@ -221,7 +241,7 @@ class SubmitPuzzleAnswerServiceTest {
 
         assertEquals(1, accepted);
         assertEquals(attempts - 1, alreadySolved);
-        assertEquals(1, received.size());
+        assertEquals(3, received.size());
     }
 
     @Test
@@ -237,8 +257,10 @@ class SubmitPuzzleAnswerServiceTest {
         assertEquals(Status.ALREADY_SOLVED, persistent.submit(session.id(), "bob", "chest", CORRECT).status());
 
         final var saved = database.findBySessionId(session.id()).orElseThrow().snapshot();
-        assertEquals("solved", saved.attributes().get("puzzle.chest"));
-        assertEquals(1, saved.version());
+        assertEquals(Set.of("chest"), saved.completedPuzzleIds());
+        assertEquals(Set.of(ItemType.LAB_KEY), saved.collectedItems());
+        assertTrue(saved.exitUnlocked());
+        assertEquals(3, saved.version());
     }
 
     /** Like the PostgreSQL repository: every read returns a new object, so only saved changes survive. */
@@ -254,8 +276,7 @@ class SubmitPuzzleAnswerServiceTest {
 
         @Override
         public Optional<Game> findBySessionId(final UUID sessionId) {
-            return Optional.ofNullable(rows.get(sessionId)).map(row -> Game.restore(
-                    row.sessionId(), row.currentRoomId(), row.status(), row.attributes(), row.version()));
+            return Optional.ofNullable(rows.get(sessionId)).map(Game::restore);
         }
     }
 }

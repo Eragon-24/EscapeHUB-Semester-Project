@@ -16,6 +16,7 @@ import com.escapehub.gameplay.application.JoinGameSessionService;
 import com.escapehub.gameplay.application.SessionUpdateChannel;
 import com.escapehub.gameplay.application.SharedStateService;
 import com.escapehub.gameplay.domain.GameSession;
+import com.escapehub.gameplay.domain.GameState;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 @SpringBootTest
 class PuzzleSubmissionControllerTest {
@@ -57,6 +59,25 @@ class PuzzleSubmissionControllerTest {
         joinService.joinSession(session.joinCode(), "bob");
     }
 
+    private void assertUntouched() {
+        final GameState state = sharedState.snapshot(session.id(), "alice");
+        assertTrue(state.completedPuzzleIds().isEmpty());
+        assertTrue(state.collectedItems().isEmpty());
+        assertFalse(state.exitUnlocked());
+    }
+
+    @Test
+    void exactlyOneHandlerAcceptsPuzzleAnswers() {
+        final long handlers = context
+                .getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class)
+                .getHandlerMethods().keySet().stream()
+                .filter(mapping -> mapping.getPatternValues()
+                        .contains("/game-sessions/{sessionId}/puzzles/{puzzleId}/answer"))
+                .count();
+
+        assertEquals(1, handlers);
+    }
+
     private String answerPath(final UUID sessionId, final String puzzleId) {
         return "/game-sessions/" + sessionId + "/puzzles/" + puzzleId + "/answer";
     }
@@ -73,9 +94,11 @@ class PuzzleSubmissionControllerTest {
                 .andExpect(jsonPath("$.puzzleId").value("chest"))
                 .andExpect(jsonPath("$.message").exists());
 
-        assertEquals(1, bobsStream.size());
-        assertEquals("puzzle.chest", bobsStream.get(0).key());
-        assertEquals("solved", sharedState.snapshot(session.id(), "bob").attributes().get("puzzle.chest"));
+        assertEquals(List.of("progress.puzzles.chest", "progress.items.LAB_KEY", "game.exitUnlocked"),
+                bobsStream.stream().map(SharedStateUpdate::key).toList());
+        final GameState seenByBob = sharedState.snapshot(session.id(), "bob");
+        assertTrue(seenByBob.completedPuzzleIds().contains("chest"));
+        assertTrue(seenByBob.exitUnlocked());
     }
 
     @Test
@@ -90,7 +113,7 @@ class PuzzleSubmissionControllerTest {
                 .andExpect(jsonPath("$.message").exists());
 
         assertTrue(stream.isEmpty());
-        assertTrue(sharedState.snapshot(session.id(), "alice").attributes().isEmpty());
+        assertUntouched();
     }
 
     @Test
@@ -105,7 +128,7 @@ class PuzzleSubmissionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ALREADY_SOLVED"));
 
-        assertEquals(1, stream.size());
+        assertEquals(3, stream.size());
     }
 
     @Test
@@ -114,11 +137,14 @@ class PuzzleSubmissionControllerTest {
         channel.subscribe(session.id(), stream::add);
 
         mockMvc.perform(post("/game-sessions/" + session.id() + "/state").with(user("alice")).with(csrf())
-                        .param("key", "puzzle.chest").param("value", "solved"))
+                        .param("key", "progress.puzzles.chest").param("value", "true"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/game-sessions/" + session.id() + "/state").with(user("alice")).with(csrf())
+                        .param("key", "game.exitUnlocked").param("value", "true"))
                 .andExpect(status().isBadRequest());
 
         assertTrue(stream.isEmpty());
-        assertTrue(sharedState.snapshot(session.id(), "alice").attributes().isEmpty());
+        assertUntouched();
         mockMvc.perform(post(answerPath(session.id(), "chest")).with(user("alice")).with(csrf())
                         .param("answer", "000000"))
                 .andExpect(jsonPath("$.status").value("REJECTED"));
@@ -131,7 +157,7 @@ class PuzzleSubmissionControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/game-sessions/" + session.id() + "/puzzles").with(user("mallory")))
                 .andExpect(status().isForbidden());
-        assertTrue(sharedState.snapshot(session.id(), "alice").attributes().isEmpty());
+        assertUntouched();
     }
 
     @Test

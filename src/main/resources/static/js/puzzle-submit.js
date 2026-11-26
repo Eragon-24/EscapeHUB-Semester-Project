@@ -2,8 +2,8 @@
  * US-022: submit an answer to a puzzle of the current game session.
  *
  * The browser only sends the answer. The server validates it and decides whether the puzzle is solved; the page
- * never marks a puzzle as solved on its own. Solutions reached by other players arrive through the real-time
- * shared state (US-015, key "puzzle.<id>").
+ * never marks a puzzle as solved on its own. The solved puzzles come from the real-time shared state (US-015):
+ * both from the snapshot after a (re)load and from the updates caused by other players.
  */
 (function () {
     'use strict';
@@ -99,13 +99,15 @@
         })
         .then(function (puzzles) {
             puzzles.forEach(render);
+            applyProgress(); // the snapshot may have arrived before the forms existed
         });
 
-    if (window.EscapeHubSharedState) {
-        window.EscapeHubSharedState.onUpdate(function (update) {
-            if (update.key.indexOf('puzzle.') === 0 && update.value === 'solved') {
-                markSolved(update.key.substring('puzzle.'.length));
-            }
-        });
+    function applyProgress() {
+        if (!window.EscapeHubSharedState) {
+            return;
+        }
+        window.EscapeHubSharedState.current().completedPuzzleIds.forEach(markSolved);
     }
+
+    window.addEventListener('escapehub:progress', applyProgress);
 })();

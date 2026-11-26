@@ -1,28 +1,31 @@
 package com.escapehub.gameplay.application;
 
 import com.escapehub.gameplay.domain.GameSession;
+import com.escapehub.gameplay.domain.ItemType;
 import com.escapehub.puzzle.application.PuzzleCatalog;
 import com.escapehub.puzzle.domain.AnswerValidator;
 import com.escapehub.puzzle.domain.PuzzleDefinition;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
  * US-022: a participant submits an answer to a puzzle of the current game session.
  *
- * <p>The server alone decides: it checks the participant and the session, validates the answer against the
- * puzzle's configured solution and only then records the puzzle as solved. The progress is kept in the shared game
- * state of the session (key {@code puzzle.<id>}), so there is a single source of truth, it is persisted like the
- * rest of the game and it reaches the other participants through the real-time updates. A wrong answer changes
- * nothing. A puzzle that is already solved is never solved again, so its effect happens exactly once. Everything is
- * scoped to the session in the request.</p>
+ * <p>The server alone decides: it checks the participant and the session and validates the answer against the
+ * puzzle's configured solution. Only a correct answer completes the puzzle through
+ * {@link GameStateService#completePuzzle}, which grants the reward items, unlocks the exit (US-024), persists the
+ * progress and publishes it to the session. The shared game state is the single source of truth. A wrong answer
+ * changes nothing, and a puzzle that is already completed is never completed again, so its effects happen exactly
+ * once. Everything is scoped to the session in the request.</p>
  */
 @Service
 public class SubmitPuzzleAnswerService {
 
-    /** Shared-state value stored for a solved puzzle. */
-    public static final String SOLVED_VALUE = "solved";
+    /** Items the team receives for solving a puzzle (US-024). Puzzles without an entry give no item. */
+    private static final Map<String, Set<ItemType>> REWARDS = Map.of("chest", Set.of(ItemType.LAB_KEY));
 
     private final GameSessionRepository sessions;
     private final SharedStateService sharedState;
@@ -35,7 +38,7 @@ public class SubmitPuzzleAnswerService {
      *
      * @param sessions session metadata
      * @param sharedState shared state of the sessions (also checks participation)
-     * @param gameStates the service that persists and publishes game state changes
+     * @param gameStates the service that changes, persists and publishes the game state
      * @param catalog configured puzzles
      */
     public SubmitPuzzleAnswerService(
@@ -66,9 +69,8 @@ public class SubmitPuzzleAnswerService {
         sharedState.requireParticipant(sessionId, username);
         final PuzzleDefinition puzzle = catalog.findById(puzzleId)
                 .orElseThrow(() -> new NoSuchElementException("Ο γρίφος δεν βρέθηκε."));
-        final String key = SharedStateService.PUZZLE_KEY_PREFIX + puzzle.id();
         // snapshot() also initializes the game of the session when needed
-        if (sharedState.snapshot(sessionId, username).attributes().containsKey(key)) {
+        if (sharedState.snapshot(sessionId, username).completedPuzzleIds().contains(puzzle.id())) {
             return PuzzleSubmissionResult.alreadySolved(puzzle.id());
         }
         if (!validator.validate(answer, puzzle.solution())) {
@@ -76,7 +78,10 @@ public class SubmitPuzzleAnswerService {
         }
         final GameSession session = sessions.findById(sessionId)
                 .orElseThrow(() -> new NoSuchElementException("Η συνεδρία δεν βρέθηκε."));
-        return gameStates.setAttributeIfAbsent(session.joinCode(), username.trim(), key, SOLVED_VALUE).isPresent()
+        final boolean completedNow = gameStates.completePuzzle(
+                session.joinCode(), username.trim(), puzzle.id(), REWARDS.getOrDefault(puzzle.id(), Set.of()))
+                .isPresent();
+        return completedNow
                 ? PuzzleSubmissionResult.accepted(puzzle.id())
                 : PuzzleSubmissionResult.alreadySolved(puzzle.id());
     }
