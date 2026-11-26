@@ -8,6 +8,7 @@ import com.escapehub.evidence.infrastructure.InMemoryEvidenceRepository;
 import com.escapehub.gameplay.application.CreateGameSessionService;
 import com.escapehub.gameplay.application.JoinGameSessionService;
 import com.escapehub.gameplay.domain.GameSession;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import java.time.Instant;
@@ -21,17 +22,17 @@ class JournalServiceTest {
     private CreateGameSessionService createService;
     private JoinGameSessionService joinService;
     private InMemoryEvidenceRepository evidence;
+    private InMemorySessionParticipantsRepository participantsRepository;
     private JournalService journal;
 
     @BeforeEach
     void setUp() {
         final InMemoryGameSessionRepository sessions = new InMemoryGameSessionRepository();
-        final InMemorySessionParticipantsRepository participants =
-                new InMemorySessionParticipantsRepository();
+        participantsRepository = new InMemorySessionParticipantsRepository();
         createService = new CreateGameSessionService(sessions);
-        joinService = new JoinGameSessionService(sessions, participants);
+        joinService = new JoinGameSessionService(sessions, participantsRepository);
         evidence = new InMemoryEvidenceRepository();
-        journal = new JournalService(sessions, participants, evidence);
+        journal = new JournalService(sessions, participantsRepository, evidence);
     }
 
     private void add(final GameSession session, final String title, final String description) {
@@ -88,6 +89,31 @@ class JournalServiceTest {
                 () -> journal.viewJournal(other.joinCode(), "alice", null));
         assertThrows(SecurityException.class,
                 () -> journal.viewJournal(mine.joinCode(), "carol", null));
+    }
+
+    @Test
+    void creatorKeepsAccessAfterBeingRemovedFromActiveParticipants() {
+        final GameSession session = createService.createSession("alice");
+        final SessionParticipants participants =
+                joinService.joinSession(session.joinCode(), "bob");
+        add(session, "Σημειωματάριο", "Κωδικός");
+        participants.removePlayer("alice");
+        participantsRepository.save(participants);
+
+        assertEquals(1, journal.viewJournal(session.joinCode(), "alice", null).size());
+        assertEquals(1, journal.viewJournal(session.joinCode(), "BOB", null).size());
+    }
+
+    @Test
+    void formerParticipantWhoLeftLosesAccess() {
+        final GameSession session = createService.createSession("alice");
+        final SessionParticipants participants =
+                joinService.joinSession(session.joinCode(), "bob");
+        participants.removePlayer("bob");
+        participantsRepository.save(participants);
+
+        assertThrows(SecurityException.class,
+                () -> journal.viewJournal(session.joinCode(), "bob", null));
     }
 
     @Test

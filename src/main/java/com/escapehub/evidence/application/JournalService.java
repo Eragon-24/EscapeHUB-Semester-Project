@@ -46,9 +46,12 @@ public class JournalService {
             throw new IllegalArgumentException("Απαιτείται σύνδεση χρήστη.");
         }
         final String name = username.trim();
+        if (session.creatorUsername().equalsIgnoreCase(name)) {
+            return;
+        }
         final boolean isMember = participantsRepository.findBySessionId(session.id())
-                .map(p -> p.getPlayers().contains(name))
-                .orElse(session.creatorUsername().equals(name));
+                .map(p -> p.getPlayers().stream().anyMatch(player -> player.equalsIgnoreCase(name)))
+                .orElse(false);
         if (!isMember) {
             throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
         }
