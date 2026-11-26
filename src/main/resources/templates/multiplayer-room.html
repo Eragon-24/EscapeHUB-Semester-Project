@@ -36,6 +36,12 @@
         </div>
 
         <aside class="room-sidebar">
+            <section class="room-card" id="puzzle-progress-card" hidden>
+                <h2>Κοινή Πρόοδος Γρίφων (US-023)</h2>
+                <p id="puzzle-progress-summary" class="muted-message">Φόρτωση κοινής προόδου...</p>
+                <progress id="puzzle-progress-bar" value="0" max="100" aria-label="Πρόοδος γρίφων"></progress>
+                <ul id="puzzle-progress-list"></ul>
+            </section>
             <section class="room-card">
                 <h2>Συνεδρία παιχνιδιού</h2>
                 <div class="created-session" th:if="${createdSessionCode != null}">
