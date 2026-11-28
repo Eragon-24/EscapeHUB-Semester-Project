@@ -24,6 +24,11 @@ management:
     health:
       show-details: never
 
+escapehub:
+  game-items:
+    abandoned-laboratory:
+      - lab-notebook
+
 info:
   app:
     name: EscapeHub

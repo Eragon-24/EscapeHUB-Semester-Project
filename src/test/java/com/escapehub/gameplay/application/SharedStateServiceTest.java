@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escapehub.gameplay.domain.GameSession;
-import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.GameState;
+import com.escapehub.gameplay.domain.SessionParticipants;
 import com.escapehub.gameplay.domain.SharedStateUpdate;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
@@ -40,6 +40,7 @@ class SharedStateServiceTest {
     private InMemorySessionUpdateChannel channel;
     private List<StateChangeRule> rules;
     private SharedStateService service;
+    private RoomItemCatalog itemCatalog;
     private JoinGameSessionService joinService;
     private GameSession session;
 
@@ -51,7 +52,8 @@ class SharedStateServiceTest {
         channel = new InMemorySessionUpdateChannel();
         gameStates = new GameStateService(sessions, participants, games, channel, clock);
         rules = new ArrayList<>();
-        service = new SharedStateService(sessions, participants, gameStates, rules);
+        itemCatalog = new RoomItemCatalog(List.of("lab-notebook", "silver-key"));
+        service = new SharedStateService(sessions, participants, gameStates, rules, itemCatalog);
         joinService = new JoinGameSessionService(sessions, participants);
         session = new CreateGameSessionService(sessions).createSession("alice");
         joinService.joinSession(session.joinCode(), "bob");
@@ -98,9 +100,12 @@ class SharedStateServiceTest {
     void nonParticipantCannotChangeOrReadAndNothingIsPublished() {
         final List<SharedStateUpdate> received = listenTo(session.id());
 
-        assertThrows(AccessDeniedException.class, () -> service.applyChange(session.id(), "mallory", "door", "open"));
-        assertThrows(AccessDeniedException.class, () -> service.snapshot(session.id(), "mallory"));
-        assertThrows(AccessDeniedException.class, () -> service.requireParticipant(session.id(), " "));
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyChange(session.id(), "mallory", "door", "open"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.snapshot(session.id(), "mallory"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.requireParticipant(session.id(), " "));
         assertTrue(received.isEmpty());
         assertEquals(0, service.snapshot(session.id(), "alice").version());
     }
@@ -109,8 +114,10 @@ class SharedStateServiceTest {
     void creatorMustRemainInAnExistingParticipantRecord() {
         participants.save(new SessionParticipants(session.id(), "bob"));
 
-        assertThrows(AccessDeniedException.class, () -> service.snapshot(session.id(), "alice"));
-        assertThrows(SecurityException.class, () -> gameStates.enterGame(session.joinCode(), "alice"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.snapshot(session.id(), "alice"));
+        assertThrows(SecurityException.class,
+                () -> gameStates.enterGame(session.joinCode(), "alice"));
     }
 
     @Test
@@ -134,7 +141,8 @@ class SharedStateServiceTest {
     void participantOfOneSessionCannotChangeAnotherSession() {
         final GameSession other = new CreateGameSessionService(sessions).createSession("dave");
 
-        assertThrows(AccessDeniedException.class, () -> service.applyChange(other.id(), "alice", "door", "open"));
+        assertThrows(AccessDeniedException.class,
+                () -> service.applyChange(other.id(), "alice", "door", "open"));
         assertTrue(service.snapshot(other.id(), "dave").attributes().isEmpty());
     }
 
@@ -145,7 +153,7 @@ class SharedStateServiceTest {
                 throw new StateChangeRejectedException("Η έξοδος είναι κλειδωμένη.");
             }
         });
-        service = new SharedStateService(sessions, participants, gameStates, rules);
+        service = new SharedStateService(sessions, participants, gameStates, rules, itemCatalog);
         final List<SharedStateUpdate> received = listenTo(session.id());
 
         final StateChangeRejectedException error = assertThrows(StateChangeRejectedException.class,
@@ -161,17 +169,20 @@ class SharedStateServiceTest {
     void malformedRequestsAreRejected() {
         final String tooLong = "x".repeat(SharedStateService.MAX_VALUE_LENGTH + 1);
 
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", null, "v"));
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "", "v"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", null, "v"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "bad key!", "v"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "game.currentRoomId", "vault"));
         assertThrows(StateChangeRejectedException.class,
+                () -> service.applyChange(session.id(), "alice", "k", null));
+        assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "game.exitUnlocked", "true"));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "progress.puzzles.chest", "true"));
-        assertThrows(StateChangeRejectedException.class, () -> service.applyChange(session.id(), "alice", "k", null));
         assertThrows(StateChangeRejectedException.class,
                 () -> service.applyChange(session.id(), "alice", "k", tooLong));
         assertEquals(0, service.snapshot(session.id(), "alice").version());
@@ -183,8 +194,10 @@ class SharedStateServiceTest {
         current.deactivate();
         participants.save(current);
 
-        assertThrows(IllegalStateException.class, () -> service.applyChange(session.id(), "alice", "door", "open"));
-        assertThrows(IllegalStateException.class, () -> service.snapshot(session.id(), "alice"));
+        assertThrows(IllegalStateException.class,
+                () -> service.applyChange(session.id(), "alice", "door", "open"));
+        assertThrows(IllegalStateException.class,
+                () -> service.snapshot(session.id(), "alice"));
     }
 
     @Test
@@ -253,6 +266,103 @@ class SharedStateServiceTest {
         assertEquals(2, snapshot.version());
         assertEquals("open", snapshot.attributes().get("door"));
         assertEquals("on", snapshot.attributes().get("lamp"));
+    }
+
+    @Test
+    void pickupStoresInventoryAndPublishesToTheSession() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final SharedStateUpdate opened = service.interact(session.id(), "alice", "lab-notebook", "pickup");
+
+        assertEquals("inventory.lab-notebook", opened.key());
+        assertEquals("true", opened.value());
+        assertEquals(List.of(opened), received);
+        assertEquals("true", service.snapshot(session.id(), "alice").attributes().get("inventory.lab-notebook"));
+    }
+
+    @Test
+    void oneTimePickupCannotBeRepeated() {
+        service.interact(session.id(), "alice", "lab-notebook", "pickup");
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "bob", "lab-notebook", "pickup"));
+
+        assertTrue(received.isEmpty());
+        assertEquals("true",
+                service.snapshot(session.id(), "bob").attributes().get("inventory.lab-notebook"));
+    }
+
+    @Test
+    void invalidObjectRoomAndActionAreRejectedWithoutMutation() {
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "missing-object", "pickup"));
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "lab-notebook", "open"));
+        gameStates.changeRoom(session.joinCode(), "alice", "vault");
+        final long versionAfterRoomChange = service.snapshot(session.id(), "alice").version();
+
+        assertThrows(StateChangeRejectedException.class,
+                () -> service.interact(session.id(), "alice", "lab-notebook", "pickup"));
+
+        assertEquals(versionAfterRoomChange, service.snapshot(session.id(), "alice").version());
+        assertTrue(service.snapshot(session.id(), "alice").attributes().isEmpty());
+    }
+
+    @Test
+    void objectUpdatesAreSessionScoped() {
+        final GameSession other = new CreateGameSessionService(sessions).createSession("dave");
+        final List<SharedStateUpdate> otherView = listenTo(other.id());
+        final List<SharedStateUpdate> sameSessionView = listenTo(session.id());
+
+        service.interact(session.id(), "alice", "lab-notebook", "pickup");
+
+        assertEquals(1, sameSessionView.size());
+        assertTrue(otherView.isEmpty());
+        assertTrue(service.snapshot(other.id(), "dave").attributes().isEmpty());
+    }
+
+    @Test
+    void concurrentCollectionAllowsExactlyOneSuccessfulTransition() throws Exception {
+        final ExecutorService pool = Executors.newFixedThreadPool(2);
+        final CountDownLatch start = new CountDownLatch(1);
+        final List<Future<Boolean>> attempts = new ArrayList<>();
+        for (final String player : List.of("alice", "bob")) {
+            attempts.add(pool.submit(() -> {
+                start.await();
+                try {
+                    service.interact(session.id(), player, "lab-notebook", "pickup");
+                    return true;
+                } catch (StateChangeRejectedException rejected) {
+                    return false;
+                }
+            }));
+        }
+        start.countDown();
+        final long successes = attempts.stream().filter(future -> {
+            try {
+                return future.get();
+            } catch (Exception exception) {
+                throw new IllegalStateException(exception);
+            }
+        }).count();
+        pool.shutdown();
+
+        assertEquals(1, successes);
+        assertEquals("true",
+                service.snapshot(session.id(), "alice").attributes().get("inventory.lab-notebook"));
+        assertEquals(1, service.snapshot(session.id(), "alice").version());
+    }
+
+    @Test
+    void genericPickupAddsAnyConfiguredItemToSharedInventory() {
+        final List<SharedStateUpdate> received = listenTo(session.id());
+
+        final SharedStateUpdate update = service.interact(session.id(), "bob", "silver-key", "pickup");
+
+        assertEquals("inventory.silver-key", update.key());
+        assertEquals("true", service.snapshot(session.id(), "alice").attributes().get("inventory.silver-key"));
+        assertEquals(List.of(update), received);
     }
 
     @Test

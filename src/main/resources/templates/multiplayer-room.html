@@ -118,6 +118,15 @@
                     Η έξοδος είναι κλειδωμένη. Λύστε το σεντούκι για να αποκτήσετε το κλειδί.
                 </p>
                 <ul id="shared-state-list"></ul>
+                <h3>Room items</h3>
+                <div class="object-interaction" th:each="itemId : ${interactiveItems}"
+                     th:attr="data-object-id=${itemId}">
+                    <span th:text="${itemId}">item</span>
+                    <button type="button" data-object-action="pickup">Pick up</button>
+                </div>
+                <p id="object-interaction-message" role="status" aria-live="polite"></p>
+                <h3>Shared inventory</h3>
+                <ul id="shared-inventory-list" aria-live="polite"></ul>
             </section>
 
             <section class="room-card" id="puzzle-card"

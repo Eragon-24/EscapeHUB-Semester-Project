@@ -40,6 +40,14 @@ public class PostgresGameRepository implements GameRepository {
         transactionTemplate.executeWithoutResult(status -> {
             GameState snapshot = game.snapshot();
 
+            final int updatedState = jdbcTemplate.update(
+                    "UPDATE game_state SET status = ?, version = ? WHERE session_id = ?",
+                    snapshot.status().name(), snapshot.version(), snapshot.sessionId());
+            if (updatedState == 0) {
+                jdbcTemplate.update(
+                        "INSERT INTO game_state (session_id, status, version) VALUES (?, ?, ?)",
+                        snapshot.sessionId(), snapshot.status().name(), snapshot.version());
+            }
             jdbcTemplate.update(
                     """
                             INSERT INTO game_state (session_id, status, version, exit_unlocked)
@@ -73,6 +81,14 @@ public class PostgresGameRepository implements GameRepository {
                 );
             }
 
+            final int updatedRoom = jdbcTemplate.update(
+                    "UPDATE game_attribute SET attribute_value = ? WHERE session_id = ? AND attribute_key = ?",
+                    snapshot.currentRoomId(), snapshot.sessionId(), "game.currentRoomId");
+            if (updatedRoom == 0) {
+                jdbcTemplate.update(
+                        "INSERT INTO game_attribute (session_id, attribute_key, attribute_value) VALUES (?, ?, ?)",
+                        snapshot.sessionId(), "game.currentRoomId", snapshot.currentRoomId());
+            }
             jdbcTemplate.update(
                     """
                             INSERT INTO game_attribute

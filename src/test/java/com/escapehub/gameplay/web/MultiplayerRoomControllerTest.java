@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.Room;
 import com.escapehub.gameplay.domain.SessionParticipants;
+import com.escapehub.gameplay.application.RoomItemCatalog;
 import com.escapehub.gameplay.infrastructure.InMemoryGameSessionRepository;
 import com.escapehub.gameplay.infrastructure.InMemorySessionParticipantsRepository;
 import java.time.Instant;
@@ -31,7 +32,8 @@ class MultiplayerRoomControllerTest {
     void setUp() {
         gameSessionRepository = new InMemoryGameSessionRepository();
         participantsRepository = new InMemorySessionParticipantsRepository();
-        controller = new MultiplayerRoomController(gameSessionRepository, participantsRepository);
+        controller = new MultiplayerRoomController(
+                gameSessionRepository, participantsRepository, new RoomItemCatalog(java.util.List.of("lab-notebook")));
     }
 
     @Test

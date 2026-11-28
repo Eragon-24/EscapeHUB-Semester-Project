@@ -36,6 +36,7 @@ public class SharedStateService {
     private final SessionParticipantsRepository participants;
     private final GameStateService gameStates;
     private final List<StateChangeRule> rules;
+    private final RoomItemCatalog itemCatalog;
 
     /**
      * Creates the service.
@@ -49,11 +50,13 @@ public class SharedStateService {
             final GameSessionRepository sessions,
             final SessionParticipantsRepository participants,
             final GameStateService gameStates,
-            final List<StateChangeRule> rules) {
+            final List<StateChangeRule> rules,
+            final RoomItemCatalog itemCatalog) {
         this.sessions = sessions;
         this.participants = participants;
         this.gameStates = gameStates;
         this.rules = List.copyOf(rules);
+        this.itemCatalog = itemCatalog;
     }
 
     /**
@@ -128,6 +131,31 @@ public class SharedStateService {
             // The session's Game is created lazily by US-013. Ensure it exists before applying the first update.
             gameStates.enterGame(session.joinCode(), author);
             return gameStates.updateAttributeAndPublish(session.joinCode(), author, key, value);
+        } catch (SecurityException e) {
+            throw new AccessDeniedException(e.getMessage());
+        }
+    }
+
+    /** Picks up a configured room item into the session-wide inventory exactly once. */
+    public synchronized SharedStateUpdate interact(
+            final UUID sessionId, final String username, final String objectId, final String action) {
+        requireParticipant(sessionId, username);
+        final GameSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("Session not found"));
+        final String author = username.trim();
+        try {
+            final GameState current = gameStates.enterGame(session.joinCode(), author);
+            if (!itemCatalog.contains(current.currentRoomId(), objectId)) {
+                throw new StateChangeRejectedException("Object is not in the current room");
+            }
+            if (!"pickup".equalsIgnoreCase(action) && !"collect".equalsIgnoreCase(action)) {
+                throw new StateChangeRejectedException("Unsupported item action");
+            }
+            final String inventoryKey = "inventory." + objectId;
+            if (current.attributes().containsKey(inventoryKey)) {
+                throw new StateChangeRejectedException("Item has already been picked up");
+            }
+            return gameStates.updateAttributeAndPublish(session.joinCode(), author, inventoryKey, "true");
         } catch (SecurityException e) {
             throw new AccessDeniedException(e.getMessage());
         }

@@ -29,6 +29,27 @@
     var version = 0;
     var listeners = [];
     var source = null;
+    var objectMessage = document.getElementById('object-interaction-message');
+
+    function renderItems() {
+        var controls = document.querySelectorAll('.object-interaction');
+        var inventoryList = document.getElementById('shared-inventory-list');
+        Array.prototype.forEach.call(controls, function (control) {
+            var itemId = control.getAttribute('data-object-id');
+            var pickedUp = state['inventory.' + itemId] === 'true';
+            control.querySelector('[data-object-action="pickup"]').disabled = pickedUp;
+        });
+        if (inventoryList) {
+            inventoryList.textContent = '';
+            Object.keys(state).filter(function (key) {
+                return key.indexOf('inventory.') === 0 && state[key] === 'true';
+            }).forEach(function (key) {
+                var item = document.createElement('li');
+                item.textContent = key.substring('inventory.'.length);
+                inventoryList.appendChild(item);
+            });
+        }
+    }
 
     function metaContent(name) {
         var meta = document.querySelector('meta[name="' + name + '"]');
@@ -78,6 +99,7 @@
             return; // a newer update arrived before this snapshot
         }
         state = Object.assign({}, snapshot.attributes || {});
+        renderItems();
         currentRoomId = snapshot.currentRoomId || null;
         gameStatus = snapshot.status || null;
         exitUnlocked = snapshot.exitUnlocked === true;
@@ -103,6 +125,7 @@
             exitUnlocked = update.value === 'true';
         } else {
             state[update.key] = update.value;
+            if (update.key.indexOf('inventory.') === 0) renderItems();
             if (update.key.indexOf('progress.puzzles.') === 0 && update.value === 'true') {
                 var puzzleId = update.key.substring('progress.puzzles.'.length);
                 if (completedPuzzleIds.indexOf(puzzleId) === -1) {
@@ -171,6 +194,31 @@
             };
         }
     };
+
+    document.addEventListener('click', function (event) {
+        var control = event.target.closest('.object-interaction');
+        if (control) {
+            var action = event.target.getAttribute('data-object-action');
+            if (!action) return;
+            sendObjectInteraction(control.getAttribute('data-object-id'), action)
+                .catch(function (error) { if (objectMessage) objectMessage.textContent = error.message; });
+        }
+    });
+
+    function sendObjectInteraction(objectId, action) {
+        var headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+        if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+        return fetch('/game-sessions/' + encodeURIComponent(sessionId) + '/objects/'
+            + encodeURIComponent(objectId) + '/interactions', {
+            method: 'POST', headers: headers, body: 'action=' + encodeURIComponent(action)
+        }).then(function (response) {
+            return response.json().then(function (body) {
+                if (!response.ok) throw new Error(body.error || 'Interaction rejected');
+                if (objectMessage) objectMessage.textContent = 'Interaction accepted';
+                return body;
+            });
+        });
+    }
 
     connect();
 })();

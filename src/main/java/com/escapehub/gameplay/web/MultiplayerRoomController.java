@@ -2,6 +2,7 @@ package com.escapehub.gameplay.web;
 
 import com.escapehub.gameplay.application.GameSessionRepository;
 import com.escapehub.gameplay.application.SessionParticipantsRepository;
+import com.escapehub.gameplay.application.RoomItemCatalog;
 import com.escapehub.gameplay.domain.GameSession;
 import com.escapehub.gameplay.domain.Room;
 import com.escapehub.gameplay.domain.SessionParticipants;
@@ -24,13 +25,16 @@ public class MultiplayerRoomController {
 
     private final GameSessionRepository gameSessionRepository;
     private final SessionParticipantsRepository participantsRepository;
+    private final RoomItemCatalog itemCatalog;
     private final Room room = new Room();
 
     public MultiplayerRoomController(
             final GameSessionRepository gameSessionRepository,
-            final SessionParticipantsRepository participantsRepository) {
+            final SessionParticipantsRepository participantsRepository,
+            final RoomItemCatalog itemCatalog) {
         this.gameSessionRepository = gameSessionRepository;
         this.participantsRepository = participantsRepository;
+        this.itemCatalog = itemCatalog;
     }
 
     @GetMapping("/multiplayer-room")
@@ -53,6 +57,7 @@ public class MultiplayerRoomController {
         }
         model.addAttribute("roomName", room.getName());
         model.addAttribute("roomDescription", room.getDescription());
+        model.addAttribute("interactiveItems", itemCatalog.itemsIn("abandoned-laboratory"));
         model.addAttribute(
                 "inspectableObjects",
                 room.getSelectableObjects().stream()
@@ -111,9 +116,11 @@ public class MultiplayerRoomController {
         return principal != null && !"anonymousUser".equals(principal.getName());
     }
 
-    /** Object name and identifier rendered in the room interface. */
-    public record InspectableObject(String id, String name) { }
+    /** Object identity and display name supplied to the room view. */
+    public record InspectableObject(String id, String name) {
+    }
 
     /** Informational response returned by the room inspection endpoint. */
-    public record InspectionResult(String name, String description) { }
+    public record InspectionResult(String name, String description) {
+    }
 }

@@ -61,6 +61,10 @@ class SharedStateControllerTest {
         return "/game-sessions/" + sessionId + "/state";
     }
 
+    private String objectPath(final UUID sessionId, final String objectId) {
+        return "/game-sessions/" + sessionId + "/objects/" + objectId + "/interactions";
+    }
+
     @Test
     void participantChangesStateAndOtherParticipantsReceiveItInRealTime() throws Exception {
         final List<SharedStateUpdate> bobsStream = new ArrayList<>();
@@ -147,6 +151,46 @@ class SharedStateControllerTest {
                 .andExpect(jsonPath("$.error").exists());
 
         assertTrue(stream.isEmpty());
+    }
+
+    @Test
+    void participantCanInteractWithAnObjectAndUpdateIsBroadcast() throws Exception {
+        final List<SharedStateUpdate> updates = new ArrayList<>();
+        channel.subscribe(session.id(), updates::add);
+
+        mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("alice")).with(csrf())
+                        .param("action", "pickup"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.key").value("inventory.lab-notebook"))
+                .andExpect(jsonPath("$.value").value("true"));
+
+        assertEquals(1, updates.size());
+        assertEquals("true", updates.get(0).value());
+    }
+
+    @Test
+    void invalidObjectInteractionIsRejectedAndNotBroadcast() throws Exception {
+        final List<SharedStateUpdate> updates = new ArrayList<>();
+        channel.subscribe(session.id(), updates::add);
+
+        mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("alice")).with(csrf())
+                        .param("action", "open"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+
+        assertTrue(updates.isEmpty());
+    }
+
+    @Test
+    void nonParticipantCannotInteractWithObject() throws Exception {
+        final List<SharedStateUpdate> updates = new ArrayList<>();
+        channel.subscribe(session.id(), updates::add);
+
+        mockMvc.perform(post(objectPath(session.id(), "lab-notebook")).with(user("mallory")).with(csrf())
+                        .param("action", "open"))
+                .andExpect(status().isForbidden());
+
+        assertTrue(updates.isEmpty());
     }
 
     @Test

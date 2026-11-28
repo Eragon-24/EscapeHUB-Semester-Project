@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * US-024: the puzzle progress and the exit state survive a round trip through PostgreSQL (migration V4).
+ * US-024: the puzzle progress and exit state survive a round trip through PostgreSQL (migration V4).
  * Runs only when a database is configured through {@code DB_URL}, as in CI.
  */
 @SpringBootTest
@@ -55,13 +55,18 @@ class PostgresGameRepositoryTest {
     void progressItemsAndExitStateAreReloaded() {
         final Game game = new Game(sessionId);
         game.putAttribute("room.clue", "found");
+        game.putAttribute("inventory.lab-notebook", "true");
+        game.putAttribute("inventory.silver-key", "true");
         game.completePuzzle("chest");
         game.collectItem(ItemType.LAB_KEY);
         game.unlockExit();
 
         games.save(game);
 
-        assertEquals(game.snapshot(), games.findBySessionId(sessionId).orElseThrow().snapshot());
+        final Game restored = games.findBySessionId(sessionId).orElseThrow();
+        assertEquals(game.snapshot(), restored.snapshot());
+        assertEquals("true", restored.snapshot().attributes().get("inventory.lab-notebook"));
+        assertEquals("true", restored.snapshot().attributes().get("inventory.silver-key"));
     }
 
     @Test
@@ -69,6 +74,7 @@ class PostgresGameRepositoryTest {
         final Game game = new Game(sessionId);
         games.save(game);
         game.completePuzzle("chest");
+        game.putAttribute("inventory.lab-notebook", "true");
         game.unlockExit();
 
         games.save(game);
@@ -76,6 +82,7 @@ class PostgresGameRepositoryTest {
 
         final Game restored = games.findBySessionId(sessionId).orElseThrow();
         assertTrue(restored.snapshot().exitUnlocked());
+        assertEquals("true", restored.snapshot().attributes().get("inventory.lab-notebook"));
         assertEquals(game.snapshot(), restored.snapshot());
     }
 }
