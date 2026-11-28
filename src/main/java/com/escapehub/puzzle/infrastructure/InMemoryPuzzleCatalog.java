@@ -15,6 +15,7 @@ public class InMemoryPuzzleCatalog implements PuzzleCatalog {
 
     private static final List<PuzzleDefinition> PUZZLES = List.of(new PuzzleDefinition(
             "chest",
+            "Σεντούκι",
             "Το σεντούκι έχει κλειδαριά με εξάψηφο κωδικό. Πληκτρολόγησε τον κωδικό.",
             "483920"));
 
