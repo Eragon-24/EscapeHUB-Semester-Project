@@ -1,15 +1,6 @@
--- US-024: authoritative puzzle progress, collected items and exit state of each game.
-ALTER TABLE game_state
-    ADD COLUMN exit_unlocked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE collected_evidence
+    ADD COLUMN evidence_id VARCHAR(100);
 
-CREATE TABLE game_completed_puzzle (
-    session_id UUID NOT NULL REFERENCES game_session(id) ON DELETE CASCADE,
-    puzzle_id VARCHAR(120) NOT NULL,
-    PRIMARY KEY (session_id, puzzle_id)
-);
-
-CREATE TABLE game_collected_item (
-    session_id UUID NOT NULL REFERENCES game_session(id) ON DELETE CASCADE,
-    item_type VARCHAR(50) NOT NULL,
-    PRIMARY KEY (session_id, item_type)
-);
+ALTER TABLE collected_evidence
+    ADD CONSTRAINT uq_collected_evidence_session_evidence_id
+        UNIQUE (session_id, evidence_id);
