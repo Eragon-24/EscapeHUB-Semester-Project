@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.dao.DataIntegrityViolationException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:evidence_jpa;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
@@ -52,5 +54,33 @@ class JpaEvidenceRepositoryTest {
         assertEquals(List.of(first, second), result);
         assertEquals(1, repository.findBySessionId(other).size());
         assertEquals(0, repository.findBySessionId(UUID.randomUUID()).size());
+    }
+    @Test
+    void persistsEvidenceIdAndEnforcesUniqueSessionEvidenceIdConstraint() {
+        final UUID sessionId = UUID.randomUUID();
+        final EvidenceEntry first = new EvidenceEntry(
+                UUID.randomUUID(),
+                sessionId,
+                "LAB_NOTEBOOK",
+                "Σημειωματάριο Εργαστηρίου",
+                "Περιγραφή (Πηγή: Πάγκος)",
+                Instant.now()
+        );
+        final EvidenceEntry saved = repository.save(first);
+        assertEquals("LAB_NOTEBOOK", saved.evidenceId());
+
+        final List<EvidenceEntry> loaded = repository.findBySessionId(sessionId);
+        assertEquals(1, loaded.size());
+        assertEquals("LAB_NOTEBOOK", loaded.get(0).evidenceId());
+
+        final EvidenceEntry duplicate = new EvidenceEntry(
+                UUID.randomUUID(),
+                sessionId,
+                "LAB_NOTEBOOK",
+                "Άλλος Τίτλος",
+                "Άλλη Περιγραφή",
+                Instant.now()
+        );
+        assertThrows(DataIntegrityViolationException.class, () -> repository.save(duplicate));
     }
 }

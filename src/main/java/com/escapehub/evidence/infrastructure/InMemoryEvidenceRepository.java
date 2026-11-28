@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
-
 
 @Repository
 @Profile("!postgres")
@@ -23,7 +23,17 @@ public class InMemoryEvidenceRepository implements EvidenceRepository {
         if (entry == null) {
             throw new IllegalArgumentException("Entry must not be null");
         }
-        entriesBySession.computeIfAbsent(entry.sessionId(), id -> new ArrayList<>()).add(entry);
+        final List<EvidenceEntry> sessionEntries =
+                entriesBySession.computeIfAbsent(entry.sessionId(), id -> new ArrayList<>());
+        if (entry.evidenceId() != null) {
+            final boolean duplicate = sessionEntries.stream()
+                    .anyMatch(existing -> entry.evidenceId().equals(existing.evidenceId()));
+            if (duplicate) {
+                throw new DataIntegrityViolationException(
+                        "Duplicate evidenceId for session: " + entry.evidenceId());
+            }
+        }
+        sessionEntries.add(entry);
         return entry;
     }
 
