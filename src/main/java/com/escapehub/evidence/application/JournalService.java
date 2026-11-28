@@ -73,18 +73,18 @@ public class JournalService {
         requireActiveParticipantOrCreator(session, username);
 
         if (command == null || command.evidenceId() == null || command.evidenceId().isBlank()) {
-            throw new IllegalArgumentException("Το αναγνωριστικό στοιχείου είναι υποχρεωτικό.");
+            throw new InvalidEvidenceException("Το αναγνωριστικό στοιχείου είναι υποχρεωτικό.");
         }
 
         final EvidenceCatalog.ClueDefinition definition = EvidenceCatalog
                 .findEligible(command.evidenceId())
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new InvalidEvidenceException(
                         "Το στοιχείο δεν είναι επιλέξιμο για προσθήκη στο ημερολόγιο."));
 
         final boolean alreadyExists = evidenceRepository.findBySessionId(session.id()).stream()
                 .anyMatch(existing -> definition.evidenceId().equals(existing.evidenceId()));
         if (alreadyExists) {
-            throw new IllegalStateException(
+            throw new DuplicateEvidenceException(
                     "Το στοιχείο έχει ήδη προστεθεί στο κοινό ημερολόγιο της συνεδρίας.");
         }
 
@@ -106,7 +106,7 @@ public class JournalService {
         try {
             return evidenceRepository.save(entry);
         } catch (final DataIntegrityViolationException exception) {
-            throw new IllegalStateException(
+            throw new DuplicateEvidenceException(
                     "Το στοιχείο έχει ήδη προστεθεί στο κοινό ημερολόγιο της συνεδρίας.",
                     exception);
         }
@@ -114,16 +114,16 @@ public class JournalService {
 
     private GameSession findSession(final String joinCode) {
         if (joinCode == null || joinCode.isBlank()) {
-            throw new IllegalArgumentException("Ο κωδικός συνεδρίας δεν μπορεί να είναι κενός.");
+            throw new SessionNotFoundException("Ο κωδικός συνεδρίας δεν μπορεί να είναι κενός.");
         }
         return gameSessionRepository.findByJoinCode(joinCode.trim().toUpperCase(Locale.ROOT))
-                .orElseThrow(() -> new IllegalArgumentException("Μη έγκυρος κωδικός συνεδρίας."));
+                .orElseThrow(() -> new SessionNotFoundException("Μη έγκυρος κωδικός συνεδρίας."));
     }
 
     private void requireActiveParticipantOrCreator(
             final GameSession session, final String username) {
         if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("Απαιτείται σύνδεση χρήστη.");
+            throw new InvalidEvidenceException("Απαιτείται σύνδεση χρήστη.");
         }
         final String name = username.trim();
         final boolean isCreator = session.creatorUsername().equalsIgnoreCase(name);
@@ -138,7 +138,7 @@ public class JournalService {
                 throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
             }
             if (!participants.isActive()) {
-                throw new IllegalStateException("Η συνεδρία δεν είναι πλέον ενεργή.");
+                throw new InactiveSessionException("Η συνεδρία δεν είναι πλέον ενεργή.");
             }
             return;
         }
@@ -147,6 +147,7 @@ public class JournalService {
             throw new SecurityException("Δεν συμμετέχεις σε αυτή τη συνεδρία.");
         }
     }
+
     private String resolveText(final String candidate, final String fallback) {
         if (candidate == null || candidate.isBlank()) {
             return fallback;
@@ -154,4 +155,3 @@ public class JournalService {
         return candidate.trim();
     }
 }
-
